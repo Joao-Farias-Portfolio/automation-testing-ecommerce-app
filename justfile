@@ -210,8 +210,24 @@ test-java-feature FEATURE:
 report-java:
     @open java-automation/build/reports/serenity/index.html
 
-# Run all test suites (backend pytest + Playwright E2E + Serenity Java)
+# ─── java-api-testing ─────────────────────────────────────────────────────────
+
+# Run Serenity BDD REST API tests (requires backend running on :8001)
+test-java-api:
+    cd java-api-testing && ./gradlew test
+    @echo "Report: java-api-testing/build/reports/serenity/index.html"
+
+# Run API tests for a specific tag  (e.g.: just test-java-api-tag TAG=@products)
+test-java-api-tag TAG:
+    cd java-api-testing && ./gradlew test -Dcucumber.filter.tags="{{TAG}}"
+
+# Open the API test Serenity HTML report
+report-java-api:
+    @open java-api-testing/build/reports/serenity/index.html
+
+# Run all test suites (backend pytest + Playwright E2E + Serenity Java + Serenity API)
 test-all:
     @just test-local
     @just test-e2e
     @just test-java
+    @just test-java-api
