@@ -180,3 +180,38 @@ migrate-down:
 
 migrate-history:
     cd backend && uv run --active alembic history
+
+# ─── java-automation ──────────────────────────────────────────────────────────
+
+# Generate Gradle wrapper (requires Gradle installed: brew install gradle)
+install-java:
+    @which gradle > /dev/null || (echo "Install Gradle first: brew install gradle" && exit 1)
+    cd java-automation && gradle wrapper --gradle-version 9.4.1
+    @echo "Gradle wrapper created. Run: just test-java"
+
+# Run all Serenity BDD Java E2E tests (headless, generates HTML report)
+test-java:
+    cd java-automation && ./gradlew test
+    @echo "Report: java-automation/build/reports/serenity/index.html"
+
+# Run Java tests with visible browser
+test-java-headed:
+    cd java-automation && ./gradlew test -Denvironment=headed
+
+# Run tests for a specific tag  (e.g.: just test-java-tag TAG=@cart)
+test-java-tag TAG:
+    cd java-automation && ./gradlew test -Dcucumber.filter.tags="{{TAG}}"
+
+# Run tests for a specific feature file  (e.g.: just test-java-feature FEATURE=cart)
+test-java-feature FEATURE:
+    cd java-automation && ./gradlew test -Dcucumber.filter.tags="@{{FEATURE}}"
+
+# Open the Serenity HTML report
+report-java:
+    @open java-automation/build/reports/serenity/index.html
+
+# Run all test suites (backend pytest + Playwright E2E + Serenity Java)
+test-all:
+    @just test-local
+    @just test-e2e
+    @just test-java
