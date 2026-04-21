@@ -63,9 +63,11 @@ public class BrowseProductsSteps {
                 By.cssSelector("[data-testid='product-card']")));
         // Once products are visible, loading indicators must be gone
         var loadingElements = driver.findElements(By.cssSelector("[data-testid='loading']"));
-        assertThat(loadingElements.stream().noneMatch(el -> {
-            try { return el.isDisplayed(); } catch (Exception e) { return false; }
-        })).isTrue();
+        assertThat(loadingElements.stream().noneMatch(this::isElementDisplayed)).isTrue();
+    }
+
+    private boolean isElementDisplayed(org.openqa.selenium.WebElement el) {
+        try { return el.isDisplayed(); } catch (Exception e) { return false; }
     }
 
     @Then("product images should have valid sources")

@@ -12,6 +12,7 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
 import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -122,17 +123,18 @@ public class CartSteps {
     @Then("the cart total should have changed")
     public void cartTotalShouldHaveChanged() {
         var driver = BrowseTheWeb.as(OnlineShopper.named("Shopper")).getDriver();
-        String capturedInitial = initialCartTotal;
+        String captured = initialCartTotal;
         try {
             new WebDriverWait(driver, Duration.ofSeconds(10))
-                .until(d -> {
-                    var totals = d.findElements(By.cssSelector("[data-testid='cart-total']"));
-                    if (totals.isEmpty()) return false;
-                    return !totals.get(0).getText().trim().equals(capturedInitial);
-                });
+                .until(d -> cartTotalHasChangedFrom(d, captured));
         } catch (Exception ignored) {}
-        String currentTotal = CartTotal.displayed().answeredBy(OnlineShopper.named("Shopper"));
-        assertThat(currentTotal).isNotEqualTo(initialCartTotal);
+        assertThat(CartTotal.displayed().answeredBy(OnlineShopper.named("Shopper")))
+            .isNotEqualTo(initialCartTotal);
+    }
+
+    private boolean cartTotalHasChangedFrom(WebDriver driver, String initial) {
+        var totals = driver.findElements(By.cssSelector("[data-testid='cart-total']"));
+        return !totals.isEmpty() && !totals.get(0).getText().trim().equals(initial);
     }
 
     @Then("the cart should show an empty state")
