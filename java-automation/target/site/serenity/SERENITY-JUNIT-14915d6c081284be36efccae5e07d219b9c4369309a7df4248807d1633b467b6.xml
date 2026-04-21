@@ -1,1 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><testsuite errors="0" failures="0" name="Product Browsing" skipped="0" tests="3" time="9.6" timestamp="2026-04-22 01:14:04"><testcase name="Products are displayed on the homepage"/><testcase name="Product images are served from the backend"/><testcase name="Loading state resolves before products appear"/></testsuite>

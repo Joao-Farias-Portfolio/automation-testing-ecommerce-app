@@ -1,1 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><testsuite errors="0" failures="0" name="Product Search and Filtering" skipped="0" tests="2" time="6.88" timestamp="2026-04-22 01:15:01"><testcase name="Search for a product by name"/><testcase name="Search with no matching results shows empty state"/></testsuite>
