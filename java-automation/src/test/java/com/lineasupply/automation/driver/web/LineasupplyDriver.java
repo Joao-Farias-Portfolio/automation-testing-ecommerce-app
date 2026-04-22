@@ -10,6 +10,7 @@ import com.lineasupply.automation.dsl.domain.ProductDetail;
 import com.lineasupply.automation.dsl.domain.ProductListing;
 import com.lineasupply.automation.dsl.domain.SavedState;
 import com.lineasupply.automation.dsl.domain.SearchResults;
+import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
 import net.serenitybdd.screenplay.actions.Open;
 import net.serenitybdd.screenplay.actors.OnStage;
@@ -42,6 +43,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
+    @Step("Navigate to home page")
     @Override
     public void openHomePage() {
         log.info("openHomePage: navigating to " + BASE_URL);
@@ -49,6 +51,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("openHomePage: navigation complete");
     }
 
+    @Step("Navigate to cart page")
     @Override
     public void openCartPage() {
         log.info("openCartPage: navigating to cart");
@@ -56,6 +59,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("openCartPage: navigation complete");
     }
 
+    @Step("Navigate to saved page")
     @Override
     public void openSavedPage() {
         log.info("openSavedPage: navigating to saved page");
@@ -63,6 +67,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("openSavedPage: navigation complete");
     }
 
+    @Step("Navigate back")
     @Override
     public void navigateBack() {
         log.info("navigateBack: navigating browser back");
@@ -72,6 +77,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
 
     // ── Actions ──────────────────────────────────────────────────────────────
 
+    @Step("Add product to cart")
     @Override
     public void addProductToCart() {
         log.info("addProductToCart: finding first enabled add-to-cart button");
@@ -85,6 +91,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("addProductToCart: clicked first enabled add-to-cart button");
     }
 
+    @Step("Remove first item from cart")
     @Override
     public void removeFirstItemFromCart() {
         log.info("removeFirstItemFromCart: removing first cart item");
@@ -93,6 +100,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("removeFirstItemFromCart: first cart item removed");
     }
 
+    @Step("Change quantity to {0}")
     @Override
     public void changeQuantityTo(int quantity) {
         log.info("changeQuantityTo: setting quantity to " + quantity);
@@ -102,6 +110,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("changeQuantityTo: quantity set to " + quantity);
     }
 
+    @Step("Search for '{0}'")
     @Override
     public void searchFor(String term) {
         log.info("searchFor: searching for '" + term + "'");
@@ -112,6 +121,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("searchFor: search submitted for '" + term + "'");
     }
 
+    @Step("Click first product card")
     @Override
     public void clickFirstProductCard() {
         log.info("clickFirstProductCard: clicking first product card");
@@ -121,6 +131,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("clickFirstProductCard: navigated to product detail page");
     }
 
+    @Step("Select alternative delivery option")
     @Override
     public void selectAlternativeDeliveryOption() {
         log.info("selectAlternativeDeliveryOption: selecting a non-currently-selected delivery option");
@@ -141,6 +152,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
             () -> log.warning("selectAlternativeDeliveryOption: all options are already selected"));
     }
 
+    @Step("Toggle first save button")
     @Override
     public void toggleFirstSaveButton() {
         log.info("toggleFirstSaveButton: toggling first save button");
@@ -151,6 +163,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         log.fine("toggleFirstSaveButton: save button toggled from aria-pressed=" + previousState);
     }
 
+    @Step("Click wishlist link")
     @Override
     public void clickWishlistLink() {
         log.info("clickWishlistLink: clicking wishlist link");
