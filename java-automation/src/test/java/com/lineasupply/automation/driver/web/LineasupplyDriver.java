@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-public class LineasupplyDriver implements LineasupplyProtocol {
+public final class LineasupplyDriver implements LineasupplyProtocol {
 
     private static final Logger log = Logger.getLogger(LineasupplyDriver.class.getName());
     private static final String BASE_URL = "http://localhost:3001";
