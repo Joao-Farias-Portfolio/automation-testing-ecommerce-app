@@ -14,13 +14,13 @@ public interface LineasupplyProtocol {
     void openSavedPage();
     void navigateBack();
 
-    void addProductToCart(int index);
-    void removeItemFromCart(int index);
+    void addProductToCart();
+    void removeFirstItemFromCart();
     void changeQuantityTo(int quantity);
     void searchFor(String term);
-    void clickProductCard(int index);
-    void selectDeliveryOption(int index);
-    void toggleSaveProduct(int index);
+    void clickFirstProductCard();
+    void selectAlternativeDeliveryOption();
+    void toggleFirstSaveButton();
     void clickWishlistLink();
 
     ProductListing getProductListing();
@@ -30,4 +30,11 @@ public interface LineasupplyProtocol {
     SearchResults  getSearchResults();
     SavedState     getSavedState();
     String         currentUrl();
+
+    void waitForCartCountToBe(int expected);
+    void waitForCartTotalToChange(String previousTotal);
+    void waitForCartToBeEmpty();
+    void waitForCartItemsToAppear();
+    void waitForProductsToLoad();
+    void waitForSearchResultsToLoad();
 }
