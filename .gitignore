@@ -36,6 +36,7 @@ coverage.*
 # Intentionally keeping these commented so the project is easy to clone and get started with
 #*.sqlite3
 #*.db
+backend/store.db
 *.db-shm
 *.db-wal
 
