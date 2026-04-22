@@ -37,4 +37,5 @@ public interface LineasupplyProtocol {
     void waitForCartItemsToAppear();
     void waitForProductsToLoad();
     void waitForSearchResultsToLoad();
+    void waitForSavedPageToLoad();
 }
