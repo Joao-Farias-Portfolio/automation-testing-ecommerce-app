@@ -3,109 +3,394 @@ package com.lineasupply.automation.driver.web;
 import com.lineasupply.automation.dsl.LineasupplyProtocol;
 import com.lineasupply.automation.dsl.domain.CartState;
 import com.lineasupply.automation.dsl.domain.DeliveryState;
+import com.lineasupply.automation.dsl.domain.ProductCard;
 import com.lineasupply.automation.dsl.domain.ProductDetail;
 import com.lineasupply.automation.dsl.domain.ProductListing;
 import com.lineasupply.automation.dsl.domain.SavedState;
 import com.lineasupply.automation.dsl.domain.SearchResults;
+import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
+import net.serenitybdd.screenplay.actions.Open;
+import net.serenitybdd.screenplay.actors.OnStage;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class LineasupplyDriver implements LineasupplyProtocol {
 
     private static final Logger log = Logger.getLogger(LineasupplyDriver.class.getName());
+    private static final String BASE_URL = "http://localhost:3001";
+
+    // ── Driver access ────────────────────────────────────────────────────────
+
+    private WebDriver driver() {
+        return BrowseTheWeb.as(OnStage.theActorCalled("Shopper")).getDriver();
+    }
+
+    private void navigateTo(String url) {
+        OnStage.theActorCalled("Shopper").attemptsTo(Open.url(url));
+    }
+
+    // ── Navigation ───────────────────────────────────────────────────────────
 
     @Override
     public void openHomePage() {
-        throw new UnsupportedOperationException("openHomePage not yet implemented");
+        log.info("openHomePage: navigating to " + BASE_URL);
+        navigateTo(BASE_URL);
+        log.fine("openHomePage: navigation complete");
     }
 
     @Override
     public void openCartPage() {
-        throw new UnsupportedOperationException("openCartPage not yet implemented");
+        log.info("openCartPage: navigating to cart");
+        navigateTo(BASE_URL + "/cart");
+        log.fine("openCartPage: navigation complete");
     }
 
     @Override
     public void openSavedPage() {
-        throw new UnsupportedOperationException("openSavedPage not yet implemented");
+        log.info("openSavedPage: navigating to saved page");
+        navigateTo(BASE_URL + "/saved");
+        log.fine("openSavedPage: navigation complete");
     }
 
     @Override
     public void navigateBack() {
-        throw new UnsupportedOperationException("navigateBack not yet implemented");
+        log.info("navigateBack: navigating browser back");
+        driver().navigate().back();
+        log.fine("navigateBack: navigation complete");
     }
+
+    // ── Actions ──────────────────────────────────────────────────────────────
 
     @Override
     public void addProductToCart(int index) {
-        throw new UnsupportedOperationException("addProductToCart not yet implemented");
+        log.info("addProductToCart: adding product at index " + index);
+        waitUntilMoreThan(0, "[data-testid='add-to-cart']");
+        clickAtIndex("[data-testid='add-to-cart']", index);
+        log.fine("addProductToCart: product at index " + index + " added");
     }
 
     @Override
     public void removeItemFromCart(int index) {
-        throw new UnsupportedOperationException("removeItemFromCart not yet implemented");
+        log.info("removeItemFromCart: removing item at index " + index);
+        waitUntilMoreThan(0, "[data-testid='remove-item']");
+        clickAtIndex("[data-testid='remove-item']", index);
+        log.fine("removeItemFromCart: item at index " + index + " removed");
     }
 
     @Override
     public void changeQuantityTo(int quantity) {
-        throw new UnsupportedOperationException("changeQuantityTo not yet implemented");
+        log.info("changeQuantityTo: setting quantity to " + quantity);
+        waitUntilPresent("[data-testid='quantity-display']");
+        var input = driver().findElement(By.cssSelector("[data-testid='quantity-display']"));
+        setReactInputValue(input, String.valueOf(quantity));
+        log.fine("changeQuantityTo: quantity set to " + quantity);
     }
 
     @Override
     public void searchFor(String term) {
-        throw new UnsupportedOperationException("searchFor not yet implemented");
+        log.info("searchFor: searching for '" + term + "'");
+        var searchInput = driver().findElement(By.cssSelector("input[placeholder*='Search Items']"));
+        searchInput.clear();
+        searchInput.sendKeys(term);
+        searchInput.sendKeys(org.openqa.selenium.Keys.ENTER);
+        log.fine("searchFor: search submitted for '" + term + "'");
     }
 
     @Override
     public void clickProductCard(int index) {
-        throw new UnsupportedOperationException("clickProductCard not yet implemented");
+        log.info("clickProductCard: clicking product card at index " + index);
+        waitUntilVisible("[data-testid='product-card']");
+        clickAtIndex("[data-testid='product-card']", index);
+        waitUntilUrlMatches(".*/products/\\d+");
+        log.fine("clickProductCard: navigated to product detail page");
     }
 
     @Override
     public void selectDeliveryOption(int index) {
-        throw new UnsupportedOperationException("selectDeliveryOption not yet implemented");
+        log.info("selectDeliveryOption: selecting delivery option at index " + index);
+        var section = deliverySection();
+        if (section.isEmpty()) {
+            log.warning("selectDeliveryOption: no delivery section found");
+            return;
+        }
+        var radios = section.getFirst().findElements(By.cssSelector("input[type='radio']"));
+        if (index < radios.size()) {
+            var radio = radios.get(index);
+            if (!radio.isSelected()) {
+                radio.findElement(By.xpath("../..")).click();
+                log.fine("selectDeliveryOption: clicked delivery option at index " + index);
+            } else {
+                log.fine("selectDeliveryOption: option at index " + index + " was already selected");
+            }
+        }
     }
 
     @Override
     public void toggleSaveProduct(int index) {
-        throw new UnsupportedOperationException("toggleSaveProduct not yet implemented");
+        log.info("toggleSaveProduct: toggling save button at index " + index);
+        var buttons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
+        var button = buttons.get(index);
+        var previousState = button.getAttribute("aria-pressed");
+        button.click();
+        waitForAriaPressed(button, previousState);
+        log.fine("toggleSaveProduct: save button at index " + index + " toggled from aria-pressed=" + previousState);
     }
 
     @Override
     public void clickWishlistLink() {
-        throw new UnsupportedOperationException("clickWishlistLink not yet implemented");
+        log.info("clickWishlistLink: clicking wishlist link");
+        driver().findElement(By.cssSelector("[data-testid='wishlist-link']")).click();
+        waitUntilUrlContains("/saved");
+        log.fine("clickWishlistLink: navigated to saved page");
     }
+
+    // ── Queries ──────────────────────────────────────────────────────────────
 
     @Override
     public ProductListing getProductListing() {
-        throw new UnsupportedOperationException("getProductListing not yet implemented");
+        log.info("getProductListing: waiting for product cards");
+        var elements = loadedProductCardElements();
+        var cards = elements.stream().map(this::toProductCard).toList();
+        boolean loadingVisible = hasVisibleLoadingElements();
+        log.info("getProductListing: found " + cards.size() + " cards, loadingVisible=" + loadingVisible);
+        return new ProductListing(cards, loadingVisible);
     }
 
     @Override
     public CartState getCartState() {
-        throw new UnsupportedOperationException("getCartState not yet implemented");
+        log.info("getCartState: reading cart state");
+        var count = readCartCount();
+        var total = readCartTotal();
+        var items = readCartItems();
+        boolean empty = isCartEmptyStateVisible();
+        log.info("getCartState: count=" + count + ", total=" + total + ", items=" + items.size() + ", empty=" + empty);
+        return new CartState(count, total, items, empty);
     }
 
     @Override
     public ProductDetail getProductDetail() {
-        throw new UnsupportedOperationException("getProductDetail not yet implemented");
+        log.info("getProductDetail: reading product detail page");
+        waitUntilVisible("[data-testid='product-title']");
+        var title = textOf("[data-testid='product-title']");
+        var price = textOf("[data-testid='product-price']");
+        var description = textOf("[data-testid='product-description']");
+        boolean imagePresent = !driver().findElements(By.cssSelector("[data-testid='product-detail-image']")).isEmpty();
+        var addToCartButton = driver().findElement(By.cssSelector("[data-testid='add-to-cart']"));
+        var buttonText = addToCartButton.getText();
+        boolean buttonEnabled = addToCartButton.isEnabled();
+        log.info("getProductDetail: title='" + title + "', imagePresent=" + imagePresent + ", buttonEnabled=" + buttonEnabled);
+        return new ProductDetail(title, price, description, imagePresent, buttonText, buttonEnabled);
     }
 
     @Override
     public DeliveryState getDeliveryState() {
-        throw new UnsupportedOperationException("getDeliveryState not yet implemented");
+        log.info("getDeliveryState: reading delivery section");
+        var sections = deliverySection();
+        boolean visible = !sections.isEmpty() && sections.getFirst().isDisplayed();
+        if (!visible) {
+            log.info("getDeliveryState: delivery section not visible");
+            return new DeliveryState(false, List.of(), "", false);
+        }
+        var options = readDeliveryOptions(sections.getFirst());
+        var header = readDeliveryHeader();
+        boolean minimumOrderPresent = minimumOrderTextPresent();
+        log.info("getDeliveryState: visible=true, options=" + options.size() + ", header='" + header + "'");
+        return new DeliveryState(true, options, header, minimumOrderPresent);
     }
 
     @Override
     public SearchResults getSearchResults() {
-        throw new UnsupportedOperationException("getSearchResults not yet implemented");
+        log.info("getSearchResults: reading search results");
+        waitUntilUrlContains("/search/");
+        var cards = driver().findElements(By.cssSelector("[data-testid='product-card']"))
+            .stream().map(this::toProductCard).toList();
+        boolean emptyStateVisible = !driver().findElements(By.cssSelector("[data-testid='no-results']")).isEmpty();
+        log.info("getSearchResults: found " + cards.size() + " cards, emptyStateVisible=" + emptyStateVisible);
+        return new SearchResults(cards, emptyStateVisible);
     }
 
     @Override
     public SavedState getSavedState() {
-        throw new UnsupportedOperationException("getSavedState not yet implemented");
+        log.info("getSavedState: reading saved state");
+        var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
+        boolean pressed = !saveButtons.isEmpty() && "true".equals(saveButtons.getFirst().getAttribute("aria-pressed"));
+        int savedCount = readSavedCount();
+        boolean wishlistLinkVisible = !driver().findElements(By.cssSelector("[data-testid='wishlist-link']")).isEmpty();
+        log.info("getSavedState: pressed=" + pressed + ", count=" + savedCount + ", wishlistVisible=" + wishlistLinkVisible);
+        return new SavedState(pressed, savedCount, wishlistLinkVisible);
     }
 
     @Override
     public String currentUrl() {
-        throw new UnsupportedOperationException("currentUrl not yet implemented");
+        var url = driver().getCurrentUrl();
+        log.fine("currentUrl: " + url);
+        return url;
+    }
+
+    // ── Browse helpers ───────────────────────────────────────────────────────
+
+    private List<WebElement> loadedProductCardElements() {
+        waitUntilVisible("[data-testid='product-card']");
+        return driver().findElements(By.cssSelector("[data-testid='product-card']"));
+    }
+
+    private ProductCard toProductCard(WebElement el) {
+        return new ProductCard(
+            textOf(el, "[data-testid='product-title']"),
+            textOf(el, "[data-testid='product-price']"),
+            attrOf(el, "img", "src"));
+    }
+
+    private boolean hasVisibleLoadingElements() {
+        return driver().findElements(By.cssSelector("[data-testid='loading']"))
+            .stream()
+            .anyMatch(this::safeIsDisplayed);
+    }
+
+    // ── Cart helpers ─────────────────────────────────────────────────────────
+
+    private int readCartCount() {
+        var badges = driver().findElements(By.cssSelector("[data-testid='cart-count']"));
+        if (badges.isEmpty()) return 0;
+        String text = badges.getFirst().getText().trim();
+        return text.isEmpty() ? 0 : Integer.parseInt(text);
+    }
+
+    private String readCartTotal() {
+        var totals = driver().findElements(By.cssSelector("[data-testid='cart-total']"));
+        return totals.isEmpty() ? "" : totals.getFirst().getText().trim();
+    }
+
+    private List<com.lineasupply.automation.dsl.domain.CartItem> readCartItems() {
+        return driver().findElements(By.cssSelector("[data-testid='cart-item']"))
+            .stream()
+            .map(el -> new com.lineasupply.automation.dsl.domain.CartItem(el.getText().trim()))
+            .toList();
+    }
+
+    private boolean isCartEmptyStateVisible() {
+        return !driver().findElements(By.cssSelector("[data-testid='empty-cart']")).isEmpty();
+    }
+
+    // ── Delivery helpers ─────────────────────────────────────────────────────
+
+    private static final String DELIVERY_SELECTOR =
+        "[data-testid='delivery-section'], [data-testid='delivery-options'], " +
+        "[data-testid='shipping-section'], [data-testid='shipping-options']";
+
+    private List<WebElement> deliverySection() {
+        return driver().findElements(By.cssSelector(DELIVERY_SELECTOR));
+    }
+
+    private List<com.lineasupply.automation.dsl.domain.DeliveryOption> readDeliveryOptions(WebElement section) {
+        return section.findElements(By.cssSelector("input[type='radio']"))
+            .stream()
+            .map(radio -> new com.lineasupply.automation.dsl.domain.DeliveryOption(
+                radio.getText(), radio.isSelected()))
+            .toList();
+    }
+
+    private String readDeliveryHeader() {
+        var headers = driver().findElements(
+            By.xpath("//*[contains(translate(text(), 'DELIVERYOPTIONS', 'deliveryoptions'), 'delivery options')]"));
+        return headers.isEmpty() ? "" : headers.getFirst().getText().trim();
+    }
+
+    private boolean minimumOrderTextPresent() {
+        return !driver().findElements(
+            By.xpath("//*[contains(text(), 'Minimum order') or contains(text(), 'Min order')]")).isEmpty();
+    }
+
+    // ── Saved helpers ────────────────────────────────────────────────────────
+
+    private int readSavedCount() {
+        var counts = driver().findElements(By.cssSelector("[data-testid='saved-count']"));
+        if (counts.isEmpty()) return 0;
+        String number = counts.getFirst().getText().replaceAll("[^0-9]", "").trim();
+        return number.isEmpty() ? 0 : Integer.parseInt(number);
+    }
+
+    private void waitForAriaPressed(WebElement button, String previousValue) {
+        new WebDriverWait(driver(), Duration.ofSeconds(5))
+            .until(_ -> !previousValue.equals(button.getAttribute("aria-pressed")));
+    }
+
+    // ── DOM utilities ────────────────────────────────────────────────────────
+
+    private void waitUntilVisible(String css) {
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(css)));
+    }
+
+    private void waitUntilPresent(String css) {
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(css)));
+    }
+
+    private void waitUntilMoreThan(int count, String css) {
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.numberOfElementsToBeMoreThan(By.cssSelector(css), count));
+    }
+
+    private void waitUntilUrlContains(String fragment) {
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.urlContains(fragment));
+    }
+
+    private void waitUntilUrlMatches(String regex) {
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.urlMatches(regex));
+    }
+
+    private void clickAtIndex(String css, int index) {
+        driver().findElements(By.cssSelector(css)).get(index).click();
+    }
+
+    private String textOf(String css) {
+        var elements = driver().findElements(By.cssSelector(css));
+        return elements.isEmpty() ? "" : elements.getFirst().getText().trim();
+    }
+
+    private String textOf(WebElement parent, String css) {
+        return parent.findElements(By.cssSelector(css))
+            .stream()
+            .findFirst()
+            .map(WebElement::getText)
+            .map(String::trim)
+            .orElse("");
+    }
+
+    private String attrOf(WebElement parent, String css, String attribute) {
+        return parent.findElements(By.cssSelector(css))
+            .stream()
+            .findFirst()
+            .map(el -> el.getAttribute(attribute))
+            .orElse("");
+    }
+
+    private void setReactInputValue(WebElement input, String value) {
+        var js = (org.openqa.selenium.JavascriptExecutor) driver();
+        js.executeScript("""
+            var setter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value').set;
+            setter.call(arguments[0], arguments[1]);
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+            """, input, value);
+    }
+
+    private boolean safeIsDisplayed(WebElement el) {
+        try {
+            return el.isDisplayed();
+        } catch (Exception _) {
+            return false;
+        }
     }
 }
