@@ -27,6 +27,7 @@ dependencies {
 tasks.named<Test>("test") {
     useJUnitPlatform()
     include("**/*Suite.class")
+    outputs.upToDateWhen { false }
     systemProperty("cucumber.filter.tags", System.getProperty("cucumber.filter.tags", "not @wip"))
     finalizedBy("aggregate")
 }
