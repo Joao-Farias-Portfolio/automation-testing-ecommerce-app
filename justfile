@@ -3,6 +3,8 @@
 
 # ─── variables ──────────────────────────────────────────────
 LOG_DIR := "logs"
+# Latest Node 22 from nvm (Vite requires Node 20+ / 22+)
+NODE22 := `ls -d $HOME/.nvm/versions/node/v22.* 2>/dev/null | sort -V | tail -1`
 
 # Internal helper to ensure logs directory exists
 _ensure-logs-dir:
@@ -49,8 +51,8 @@ dev-headless: _ensure-logs-dir
     > {{LOG_DIR}}/frontend.log
     # backend
     cd backend && uv run --active uvicorn app.main:app --reload --reload-exclude '.venv/*' --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $$! > {{LOG_DIR}}/backend.pid
-    # frontend
-    cd frontend && npm run dev -- --host 0.0.0.0 --port 3001 >> ../{{LOG_DIR}}/frontend.log 2>&1 & echo $$! > {{LOG_DIR}}/frontend.pid
+    # frontend (must use Node 22+ for Vite)
+    cd frontend && PATH="{{NODE22}}/bin:$PATH" npm run dev -- --host 0.0.0.0 --port 3001 >> ../{{LOG_DIR}}/frontend.log 2>&1 & echo $$! > {{LOG_DIR}}/frontend.pid
     @echo "Services started in background. Use 'just logs' to inspect and 'just stop' to stop."
 
 # Stop headless dev servers
@@ -192,7 +194,7 @@ install-java:
 # Run all Serenity BDD Java E2E tests (headless, generates HTML report)
 test-java:
     cd java-automation && ./gradlew test
-    @echo "Report: java-automation/build/reports/serenity/index.html"
+    @echo "Report: java-automation/target/site/serenity/index.html"
 
 # Run Java tests with visible browser
 test-java-headed:
@@ -208,14 +210,14 @@ test-java-feature FEATURE:
 
 # Open the Serenity HTML report
 report-java:
-    @open java-automation/build/reports/serenity/index.html
+    @open java-automation/target/site/serenity/index.html
 
 # ─── java-api-testing ─────────────────────────────────────────────────────────
 
 # Run Serenity BDD REST API tests (requires backend running on :8001)
 test-java-api:
     cd java-api-testing && ./gradlew test
-    @echo "Report: java-api-testing/build/reports/serenity/index.html"
+    @echo "Report: java-api-testing/target/site/serenity/index.html"
 
 # Run API tests for a specific tag  (e.g.: just test-java-api-tag TAG=@products)
 test-java-api-tag TAG:
@@ -223,7 +225,32 @@ test-java-api-tag TAG:
 
 # Open the API test Serenity HTML report
 report-java-api:
-    @open java-api-testing/build/reports/serenity/index.html
+    @open java-api-testing/target/site/serenity/index.html
+
+# Zero-to-verify: reset DB, seed, start services, run both Java test suites
+test-java-all:
+    @echo "=== Stopping any running services ==="
+    @just stop
+    @echo "=== Resetting and seeding database ==="
+    @just reset-db
+    @echo "=== Starting services (headless) ==="
+    @just dev-headless
+    @echo "=== Waiting for backend (port 8001) ==="
+    @until curl -sf http://localhost:8001/health > /dev/null 2>&1; do sleep 1; done
+    @echo "Backend ready."
+    @echo "=== Waiting for frontend (port 3001) ==="
+    @until curl -sf http://localhost:3001 > /dev/null 2>&1; do sleep 1; done
+    @echo "Frontend ready."
+    @echo "=== Seeding database with test data ==="
+    @just seed
+    @echo "=== Running Java E2E tests ==="
+    @just test-java
+    @echo "=== Running Java API tests ==="
+    @just test-java-api
+    @echo ""
+    @echo "=== All Java tests complete ==="
+    @echo "E2E report:  java-automation/target/site/serenity/index.html"
+    @echo "API report:  java-api-testing/target/site/serenity/index.html"
 
 # Run all test suites (backend pytest + Playwright E2E + Serenity Java + Serenity API)
 test-all:
