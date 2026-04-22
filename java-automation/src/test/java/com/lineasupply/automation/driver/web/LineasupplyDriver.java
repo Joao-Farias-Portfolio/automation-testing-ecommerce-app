@@ -10,6 +10,7 @@ import com.lineasupply.automation.dsl.domain.ProductDetail;
 import com.lineasupply.automation.dsl.domain.ProductListing;
 import com.lineasupply.automation.dsl.domain.SavedState;
 import com.lineasupply.automation.dsl.domain.SearchResults;
+import lombok.extern.java.Log;
 import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
 import net.serenitybdd.screenplay.actions.Open;
@@ -24,11 +25,10 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
+@Log
 public final class LineasupplyDriver implements LineasupplyProtocol {
 
-    private static final Logger log = Logger.getLogger(LineasupplyDriver.class.getName());
     private static final String BASE_URL = "http://localhost:3001";
 
     // ── Driver access ────────────────────────────────────────────────────────

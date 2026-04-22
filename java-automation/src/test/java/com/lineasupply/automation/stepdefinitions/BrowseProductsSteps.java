@@ -4,15 +4,13 @@ import com.lineasupply.automation.driver.DriverFactory;
 import com.lineasupply.automation.dsl.LineasupplyProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
+import lombok.extern.java.Log;
 import org.assertj.core.api.SoftAssertions;
-
-import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Log
 public class BrowseProductsSteps {
-
-    private static final Logger log = Logger.getLogger(BrowseProductsSteps.class.getName());
 
     private final LineasupplyProtocol protocol = DriverFactory.create();
 

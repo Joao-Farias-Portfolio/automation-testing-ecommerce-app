@@ -5,15 +5,13 @@ import com.lineasupply.automation.dsl.LineasupplyProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import lombok.extern.java.Log;
 import org.assertj.core.api.SoftAssertions;
-
-import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Log
 public class CartSteps {
-
-    private static final Logger log = Logger.getLogger(CartSteps.class.getName());
 
     private final LineasupplyProtocol protocol = DriverFactory.create();
     private int    notedItemCount;
