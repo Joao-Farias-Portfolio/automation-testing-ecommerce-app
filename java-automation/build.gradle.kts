@@ -30,5 +30,6 @@ tasks.named<Test>("test") {
     include("**/*Suite.class")
     outputs.upToDateWhen { false }
     systemProperty("cucumber.filter.tags", System.getProperty("cucumber.filter.tags", "not @wip"))
+    doFirst { delete(layout.projectDirectory.dir("target/site/serenity")) }
     finalizedBy("aggregate")
 }
