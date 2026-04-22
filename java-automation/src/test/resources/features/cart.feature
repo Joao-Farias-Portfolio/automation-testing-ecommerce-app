@@ -1,4 +1,4 @@
-@cart
+@cart @web
 Feature: Cart Functionality
   As an online shopper on Linea Supply
   I want to manage items in my cart

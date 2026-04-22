@@ -1,4 +1,4 @@
-@browse
+@browse @web
 Feature: Product Browsing
   As an online shopper on Linea Supply
   I want to see products on the homepage

@@ -1,4 +1,4 @@
-@delivery
+@delivery @web
 Feature: Delivery Options
   As an online shopper on Linea Supply
   I want to choose a delivery option for a product
