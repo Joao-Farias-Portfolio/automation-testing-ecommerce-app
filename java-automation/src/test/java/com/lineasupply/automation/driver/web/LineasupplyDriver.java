@@ -19,6 +19,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class LineasupplyDriver implements LineasupplyProtocol {
@@ -69,19 +70,24 @@ public class LineasupplyDriver implements LineasupplyProtocol {
     // ── Actions ──────────────────────────────────────────────────────────────
 
     @Override
-    public void addProductToCart(int index) {
-        log.info("addProductToCart: adding product at index " + index);
+    public void addProductToCart() {
+        log.info("addProductToCart: finding first enabled add-to-cart button");
         waitUntilMoreThan(0, "[data-testid='add-to-cart']");
-        clickAtIndex("[data-testid='add-to-cart']", index);
-        log.fine("addProductToCart: product at index " + index + " added");
+        var buttons = driver().findElements(By.cssSelector("[data-testid='add-to-cart']"));
+        var firstEnabled = buttons.stream()
+            .filter(WebElement::isEnabled)
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No enabled add-to-cart button found"));
+        firstEnabled.click();
+        log.fine("addProductToCart: clicked first enabled add-to-cart button");
     }
 
     @Override
-    public void removeItemFromCart(int index) {
-        log.info("removeItemFromCart: removing item at index " + index);
+    public void removeFirstItemFromCart() {
+        log.info("removeFirstItemFromCart: removing first cart item");
         waitUntilMoreThan(0, "[data-testid='remove-item']");
-        clickAtIndex("[data-testid='remove-item']", index);
-        log.fine("removeItemFromCart: item at index " + index + " removed");
+        driver().findElements(By.cssSelector("[data-testid='remove-item']")).getFirst().click();
+        log.fine("removeFirstItemFromCart: first cart item removed");
     }
 
     @Override
@@ -104,43 +110,42 @@ public class LineasupplyDriver implements LineasupplyProtocol {
     }
 
     @Override
-    public void clickProductCard(int index) {
-        log.info("clickProductCard: clicking product card at index " + index);
+    public void clickFirstProductCard() {
+        log.info("clickFirstProductCard: clicking first product card");
         waitUntilVisible("[data-testid='product-card']");
-        clickAtIndex("[data-testid='product-card']", index);
+        driver().findElements(By.cssSelector("[data-testid='product-card']")).getFirst().click();
         waitUntilUrlMatches(".*/products/\\d+");
-        log.fine("clickProductCard: navigated to product detail page");
+        log.fine("clickFirstProductCard: navigated to product detail page");
     }
 
     @Override
-    public void selectDeliveryOption(int index) {
-        log.info("selectDeliveryOption: selecting delivery option at index " + index);
+    public void selectAlternativeDeliveryOption() {
+        log.info("selectAlternativeDeliveryOption: selecting a non-currently-selected delivery option");
         var section = deliverySection();
         if (section.isEmpty()) {
-            log.warning("selectDeliveryOption: no delivery section found");
+            log.warning("selectAlternativeDeliveryOption: no delivery section found");
             return;
         }
         var radios = section.getFirst().findElements(By.cssSelector("input[type='radio']"));
-        if (index < radios.size()) {
-            var radio = radios.get(index);
-            if (!radio.isSelected()) {
+        var unselected = radios.stream()
+            .filter(radio -> !radio.isSelected())
+            .findFirst();
+        unselected.ifPresentOrElse(
+            radio -> {
                 radio.findElement(By.xpath("../..")).click();
-                log.fine("selectDeliveryOption: clicked delivery option at index " + index);
-            } else {
-                log.fine("selectDeliveryOption: option at index " + index + " was already selected");
-            }
-        }
+                log.fine("selectAlternativeDeliveryOption: clicked unselected delivery option");
+            },
+            () -> log.warning("selectAlternativeDeliveryOption: all options are already selected"));
     }
 
     @Override
-    public void toggleSaveProduct(int index) {
-        log.info("toggleSaveProduct: toggling save button at index " + index);
-        var buttons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
-        var button = buttons.get(index);
+    public void toggleFirstSaveButton() {
+        log.info("toggleFirstSaveButton: toggling first save button");
+        var button = driver().findElements(By.cssSelector("[data-testid='save-button']")).getFirst();
         var previousState = button.getAttribute("aria-pressed");
         button.click();
         waitForAriaPressed(button, previousState);
-        log.fine("toggleSaveProduct: save button at index " + index + " toggled from aria-pressed=" + previousState);
+        log.fine("toggleFirstSaveButton: save button toggled from aria-pressed=" + previousState);
     }
 
     @Override
@@ -156,8 +161,8 @@ public class LineasupplyDriver implements LineasupplyProtocol {
     @Override
     public ProductListing getProductListing() {
         log.info("getProductListing: waiting for product cards");
-        var elements = loadedProductCardElements();
-        var cards = elements.stream().map(this::toProductCard).toList();
+        waitUntilVisible("[data-testid='product-card']");
+        var cards = extractProductCardsViaJavascript();
         boolean loadingVisible = hasVisibleLoadingElements();
         log.info("getProductListing: found " + cards.size() + " cards, loadingVisible=" + loadingVisible);
         return new ProductListing(cards, loadingVisible);
@@ -209,8 +214,7 @@ public class LineasupplyDriver implements LineasupplyProtocol {
     public SearchResults getSearchResults() {
         log.info("getSearchResults: reading search results");
         waitUntilUrlContains("/search/");
-        var cards = driver().findElements(By.cssSelector("[data-testid='product-card']"))
-            .stream().map(this::toProductCard).toList();
+        var cards = extractProductCardsViaJavascript();
         boolean emptyStateVisible = !driver().findElements(By.cssSelector("[data-testid='no-results']")).isEmpty();
         log.info("getSearchResults: found " + cards.size() + " cards, emptyStateVisible=" + emptyStateVisible);
         return new SearchResults(cards, emptyStateVisible);
@@ -234,18 +238,76 @@ public class LineasupplyDriver implements LineasupplyProtocol {
         return url;
     }
 
-    // ── Browse helpers ───────────────────────────────────────────────────────
+    // ── Synchronization ──────────────────────────────────────────────────────
 
-    private List<WebElement> loadedProductCardElements() {
-        waitUntilVisible("[data-testid='product-card']");
-        return driver().findElements(By.cssSelector("[data-testid='product-card']"));
+    @Override
+    public void waitForCartCountToBe(int expected) {
+        log.info("waitForCartCountToBe: waiting for cart count to be " + expected);
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.textToBe(
+                By.cssSelector("[data-testid='cart-count']"), String.valueOf(expected)));
+        log.fine("waitForCartCountToBe: cart count is now " + expected);
     }
 
-    private ProductCard toProductCard(WebElement el) {
-        return new ProductCard(
-            textOf(el, "[data-testid='product-title']"),
-            textOf(el, "[data-testid='product-price']"),
-            attrOf(el, "img", "src"));
+    @Override
+    public void waitForCartTotalToChange(String previousTotal) {
+        log.info("waitForCartTotalToChange: waiting for total to change from '" + previousTotal + "'");
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(_ -> {
+                var totals = driver().findElements(By.cssSelector("[data-testid='cart-total']"));
+                return !totals.isEmpty() && !totals.getFirst().getText().trim().equals(previousTotal);
+            });
+        log.fine("waitForCartTotalToChange: total has changed from '" + previousTotal + "'");
+    }
+
+    @Override
+    public void waitForCartToBeEmpty() {
+        log.info("waitForCartToBeEmpty: waiting for empty cart state");
+        new WebDriverWait(driver(), Duration.ofSeconds(15))
+            .until(ExpectedConditions.visibilityOfElementLocated(
+                By.cssSelector("[data-testid='empty-cart']")));
+        log.fine("waitForCartToBeEmpty: empty cart state is visible");
+    }
+
+    @Override
+    public void waitForCartItemsToAppear() {
+        log.info("waitForCartItemsToAppear: waiting for cart items to appear");
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.numberOfElementsToBeMoreThan(
+                By.cssSelector("[data-testid='cart-item']"), 0));
+        log.fine("waitForCartItemsToAppear: cart items are visible");
+    }
+
+    @Override
+    public void waitForProductsToLoad() {
+        log.info("waitForProductsToLoad: waiting for product cards");
+        waitUntilVisible("[data-testid='product-card']");
+        log.fine("waitForProductsToLoad: product cards are visible");
+    }
+
+    @Override
+    public void waitForSearchResultsToLoad() {
+        log.info("waitForSearchResultsToLoad: waiting for search URL");
+        waitUntilUrlContains("/search/");
+        log.fine("waitForSearchResultsToLoad: on search results page");
+    }
+
+    // ── Browse helpers ───────────────────────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    private List<ProductCard> extractProductCardsViaJavascript() {
+        var rawData = (List<Map<String, String>>) ((org.openqa.selenium.JavascriptExecutor) driver())
+            .executeScript("""
+                return Array.from(document.querySelectorAll('[data-testid="product-card"]'))
+                    .map(card => ({
+                        title: (card.querySelector('[data-testid="product-title"]')?.textContent ?? '').trim(),
+                        price: (card.querySelector('[data-testid="product-price"]')?.textContent ?? '').trim(),
+                        imageUrl: card.querySelector('img')?.src ?? ''
+                    }));
+                """);
+        return rawData.stream()
+            .map(m -> new ProductCard(m.get("title"), m.get("price"), m.get("imageUrl")))
+            .toList();
     }
 
     private boolean hasVisibleLoadingElements() {

@@ -23,7 +23,7 @@ public class BrowsingDsl {
 
     public void openHomePageAndWaitForProducts() {
         protocol.openHomePage();
-        protocol.getProductListing();
+        protocol.waitForProductsToLoad();
         log.fine("home page loaded with products");
     }
 
