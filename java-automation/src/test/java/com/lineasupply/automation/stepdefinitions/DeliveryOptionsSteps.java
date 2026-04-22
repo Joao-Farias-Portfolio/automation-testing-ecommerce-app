@@ -54,8 +54,7 @@ public class DeliveryOptionsSteps {
         assertThat(state.sectionVisible())
             .as("delivery section must be visible")
             .isTrue();
-        long selectedCount = state.options().stream().filter(o -> o.selected()).count();
-        assertThat(selectedCount)
+        assertThat(state.selectedOptionCount())
             .as("exactly one delivery option should be selected by default")
             .isEqualTo(1L);
         log.fine("exactly one delivery option is selected by default");
@@ -67,8 +66,7 @@ public class DeliveryOptionsSteps {
         assertThat(state.sectionVisible())
             .as("delivery section must be visible")
             .isTrue();
-        long selectedCount = state.options().stream().filter(o -> o.selected()).count();
-        assertThat(selectedCount)
+        assertThat(state.selectedOptionCount())
             .as("exactly one delivery option should be selected after changing")
             .isEqualTo(1L);
         log.fine("a delivery option is selected after changing");

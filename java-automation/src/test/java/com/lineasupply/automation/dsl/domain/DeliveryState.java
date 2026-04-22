@@ -7,4 +7,8 @@ public record DeliveryState(
     List<DeliveryOption> options,
     String headerText,
     boolean minimumOrderTextPresent
-) {}
+) {
+    public long selectedOptionCount() {
+        return options.stream().filter(DeliveryOption::selected).count();
+    }
+}
