@@ -1,6 +1,5 @@
 package com.lineasupply.automation.stepdefinitions;
 
-import com.lineasupply.automation.driver.DriverFactory;
 import com.lineasupply.automation.dsl.LineasupplyProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;

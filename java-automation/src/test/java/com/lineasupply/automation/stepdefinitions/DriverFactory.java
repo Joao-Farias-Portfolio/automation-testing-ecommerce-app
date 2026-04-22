@@ -1,4 +1,4 @@
-package com.lineasupply.automation.driver;
+package com.lineasupply.automation.stepdefinitions;
 
 import com.lineasupply.automation.driver.web.LineasupplyDriver;
 import com.lineasupply.automation.dsl.LineasupplyProtocol;
