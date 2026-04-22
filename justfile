@@ -193,20 +193,20 @@ install-java:
 
 # Run all Serenity BDD Java E2E tests (headless, generates HTML report)
 test-java:
-    cd java-automation && ./gradlew test
+    cd java-automation && ./gradlew test -Dchannel=Web
     @echo "Report: java-automation/target/site/serenity/index.html"
 
 # Run Java tests with visible browser
 test-java-headed:
-    cd java-automation && ./gradlew test -Denvironment=headed
+    cd java-automation && ./gradlew test -Dchannel=Web -Dheaded=true
 
 # Run tests for a specific tag  (e.g.: just test-java-tag TAG=@cart)
 test-java-tag TAG:
-    cd java-automation && ./gradlew test -Dcucumber.filter.tags="{{TAG}}"
+    cd java-automation && ./gradlew test -Dchannel=Web -Dcucumber.filter.tags="{{TAG}}"
 
 # Run tests for a specific feature file  (e.g.: just test-java-feature FEATURE=cart)
 test-java-feature FEATURE:
-    cd java-automation && ./gradlew test -Dcucumber.filter.tags="@{{FEATURE}}"
+    cd java-automation && ./gradlew test -Dchannel=Web -Dcucumber.filter.tags="@{{FEATURE}}"
 
 # Open the Serenity HTML report
 report-java:
