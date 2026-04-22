@@ -14,6 +14,7 @@ import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
 import net.serenitybdd.screenplay.actions.Open;
 import net.serenitybdd.screenplay.actors.OnStage;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -107,7 +108,7 @@ public final class LineasupplyDriver implements LineasupplyProtocol {
         var searchInput = driver().findElement(By.cssSelector("input[placeholder*='Search Items']"));
         searchInput.clear();
         searchInput.sendKeys(term);
-        searchInput.sendKeys(org.openqa.selenium.Keys.ENTER);
+        searchInput.sendKeys(Keys.ENTER);
         log.fine("searchFor: search submitted for '" + term + "'");
     }
 
