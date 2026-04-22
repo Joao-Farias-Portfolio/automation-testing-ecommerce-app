@@ -5,6 +5,7 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import net.serenitybdd.rest.SerenityRest;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -110,19 +111,13 @@ public class ProductApiSteps {
     @Then("products should be returned in ascending price order")
     public void productsShouldBeInAscendingPriceOrder() {
         List<Float> prices = SerenityRest.lastResponse().jsonPath().getList("price", Float.class);
-        assertThat(prices).isNotEmpty();
-        for (int i = 1; i < prices.size(); i++) {
-            assertThat(prices.get(i)).isGreaterThanOrEqualTo(prices.get(i - 1));
-        }
+        assertThat(prices).isNotEmpty().isSortedAccordingTo(Comparator.naturalOrder());
     }
 
     @Then("products should be returned in descending price order")
     public void productsShouldBeInDescendingPriceOrder() {
         List<Float> prices = SerenityRest.lastResponse().jsonPath().getList("price", Float.class);
-        assertThat(prices).isNotEmpty();
-        for (int i = 1; i < prices.size(); i++) {
-            assertThat(prices.get(i)).isLessThanOrEqualTo(prices.get(i - 1));
-        }
+        assertThat(prices).isNotEmpty().isSortedAccordingTo(Comparator.reverseOrder());
     }
 
     @Then("products should include delivery summary information")
