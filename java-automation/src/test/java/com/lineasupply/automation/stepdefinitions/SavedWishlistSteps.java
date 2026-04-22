@@ -5,14 +5,12 @@ import com.lineasupply.automation.dsl.LineasupplyProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-
-import java.util.logging.Logger;
+import lombok.extern.java.Log;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Log
 public class SavedWishlistSteps {
-
-    private static final Logger log = Logger.getLogger(SavedWishlistSteps.class.getName());
 
     private final LineasupplyProtocol protocol = DriverFactory.create();
     private boolean initialSaveState;
