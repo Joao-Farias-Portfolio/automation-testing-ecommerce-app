@@ -1,4 +1,4 @@
-@saved
+@saved @web
 Feature: Save and Wishlist Functionality
   As an online shopper on Linea Supply
   I want to save products I am interested in

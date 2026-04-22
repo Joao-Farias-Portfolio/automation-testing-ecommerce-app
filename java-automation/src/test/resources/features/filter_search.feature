@@ -1,4 +1,4 @@
-@filter
+@filter @web
 Feature: Product Search and Filtering
   As an online shopper on Linea Supply
   I want to search for specific products

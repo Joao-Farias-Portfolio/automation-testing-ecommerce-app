@@ -1,4 +1,4 @@
-@detail
+@detail @web
 Feature: Product Detail Page
   As an online shopper on Linea Supply
   I want to view detailed product information
