@@ -1,7 +1,9 @@
 package com.lineasupply.automation.driver.web;
 
 import com.lineasupply.automation.dsl.LineasupplyProtocol;
+import com.lineasupply.automation.dsl.domain.CartItem;
 import com.lineasupply.automation.dsl.domain.CartState;
+import com.lineasupply.automation.dsl.domain.DeliveryOption;
 import com.lineasupply.automation.dsl.domain.DeliveryState;
 import com.lineasupply.automation.dsl.domain.ProductCard;
 import com.lineasupply.automation.dsl.domain.ProductDetail;
@@ -186,12 +188,20 @@ public class LineasupplyDriver implements LineasupplyProtocol {
         var title = textOf("[data-testid='product-title']");
         var price = textOf("[data-testid='product-price']");
         var description = textOf("[data-testid='product-description']");
-        boolean imagePresent = !driver().findElements(By.cssSelector("[data-testid='product-detail-image']")).isEmpty();
-        var addToCartButton = driver().findElement(By.cssSelector("[data-testid='add-to-cart']"));
-        var buttonText = addToCartButton.getText();
-        boolean buttonEnabled = addToCartButton.isEnabled();
-        log.info("getProductDetail: title='" + title + "', imagePresent=" + imagePresent + ", buttonEnabled=" + buttonEnabled);
-        return new ProductDetail(title, price, description, imagePresent, buttonText, buttonEnabled);
+        boolean imagePresent = isProductImagePresent();
+        var addToCartButton = findAddToCartButton();
+        log.info("getProductDetail: title='%s', imagePresent=%b, buttonEnabled=%b"
+            .formatted(title, imagePresent, addToCartButton.isEnabled()));
+        return new ProductDetail(title, price, description, imagePresent,
+            addToCartButton.getText(), addToCartButton.isEnabled());
+    }
+
+    private boolean isProductImagePresent() {
+        return !driver().findElements(By.cssSelector("[data-testid='product-detail-image']")).isEmpty();
+    }
+
+    private WebElement findAddToCartButton() {
+        return driver().findElement(By.cssSelector("[data-testid='add-to-cart']"));
     }
 
     @Override
@@ -225,12 +235,17 @@ public class LineasupplyDriver implements LineasupplyProtocol {
         log.info("getSavedState: reading saved state");
         var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
         boolean present = !saveButtons.isEmpty();
-        boolean pressed = present && "true".equals(saveButtons.getFirst().getAttribute("aria-pressed"));
+        boolean pressed = present && isAriaPressed(saveButtons.getFirst());
         boolean enabled = present && saveButtons.getFirst().isEnabled();
         int savedCount = readSavedCount();
         boolean wishlistLinkVisible = !driver().findElements(By.cssSelector("[data-testid='wishlist-link']")).isEmpty();
-        log.info("getSavedState: present=" + present + ", pressed=" + pressed + ", enabled=" + enabled + ", count=" + savedCount);
+        log.info("getSavedState: present=%b, pressed=%b, enabled=%b, count=%d"
+            .formatted(present, pressed, enabled, savedCount));
         return new SavedState(present, pressed, enabled, savedCount, wishlistLinkVisible);
+    }
+
+    private boolean isAriaPressed(WebElement el) {
+        return "true".equals(el.getAttribute("aria-pressed"));
     }
 
     @Override
@@ -339,10 +354,10 @@ public class LineasupplyDriver implements LineasupplyProtocol {
         return totals.isEmpty() ? "" : totals.getFirst().getText().trim();
     }
 
-    private List<com.lineasupply.automation.dsl.domain.CartItem> readCartItems() {
+    private List<CartItem> readCartItems() {
         return driver().findElements(By.cssSelector("[data-testid='cart-item']"))
             .stream()
-            .map(el -> new com.lineasupply.automation.dsl.domain.CartItem(el.getText().trim()))
+            .map(el -> new CartItem(el.getText().trim()))
             .toList();
     }
 
@@ -360,11 +375,10 @@ public class LineasupplyDriver implements LineasupplyProtocol {
         return driver().findElements(By.cssSelector(DELIVERY_SELECTOR));
     }
 
-    private List<com.lineasupply.automation.dsl.domain.DeliveryOption> readDeliveryOptions(WebElement section) {
+    private List<DeliveryOption> readDeliveryOptions(WebElement section) {
         return section.findElements(By.cssSelector("input[type='radio']"))
             .stream()
-            .map(radio -> new com.lineasupply.automation.dsl.domain.DeliveryOption(
-                radio.getText(), radio.isSelected()))
+            .map(radio -> new DeliveryOption(radio.getText(), radio.isSelected()))
             .toList();
     }
 
