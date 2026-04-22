@@ -224,11 +224,13 @@ public class LineasupplyDriver implements LineasupplyProtocol {
     public SavedState getSavedState() {
         log.info("getSavedState: reading saved state");
         var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
-        boolean pressed = !saveButtons.isEmpty() && "true".equals(saveButtons.getFirst().getAttribute("aria-pressed"));
+        boolean present = !saveButtons.isEmpty();
+        boolean pressed = present && "true".equals(saveButtons.getFirst().getAttribute("aria-pressed"));
+        boolean enabled = present && saveButtons.getFirst().isEnabled();
         int savedCount = readSavedCount();
         boolean wishlistLinkVisible = !driver().findElements(By.cssSelector("[data-testid='wishlist-link']")).isEmpty();
-        log.info("getSavedState: pressed=" + pressed + ", count=" + savedCount + ", wishlistVisible=" + wishlistLinkVisible);
-        return new SavedState(pressed, savedCount, wishlistLinkVisible);
+        log.info("getSavedState: present=" + present + ", pressed=" + pressed + ", enabled=" + enabled + ", count=" + savedCount);
+        return new SavedState(present, pressed, enabled, savedCount, wishlistLinkVisible);
     }
 
     @Override
@@ -290,6 +292,13 @@ public class LineasupplyDriver implements LineasupplyProtocol {
         log.info("waitForSearchResultsToLoad: waiting for search URL");
         waitUntilUrlContains("/search/");
         log.fine("waitForSearchResultsToLoad: on search results page");
+    }
+
+    @Override
+    public void waitForSavedPageToLoad() {
+        log.info("waitForSavedPageToLoad: waiting for saved page URL");
+        waitUntilUrlContains("/saved");
+        log.fine("waitForSavedPageToLoad: on saved page");
     }
 
     // ── Browse helpers ───────────────────────────────────────────────────────
