@@ -67,7 +67,11 @@ public class BrowseProductsSteps {
     }
 
     private boolean isElementDisplayed(org.openqa.selenium.WebElement el) {
-        try { return el.isDisplayed(); } catch (Exception e) { return false; }
+        try {
+            return el.isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Then("product images should have valid sources")
