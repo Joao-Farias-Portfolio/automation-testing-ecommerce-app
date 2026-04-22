@@ -38,8 +38,6 @@ public class CategoryApiSteps {
     public void eachCategoryShouldHaveAtLeastOneProduct() {
         List<Map<String, Object>> categories = SerenityRest.lastResponse().jsonPath().getList("$");
         assertThat(categories).isNotEmpty();
-        // The /api/categories endpoint only returns categories that have products
-        // We verify the endpoint returns a non-empty list (each has at least one product)
         assertThat(categories.size()).isGreaterThan(0);
     }
 }
