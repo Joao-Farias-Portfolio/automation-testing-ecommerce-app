@@ -251,6 +251,8 @@ test-java-all:
     @echo "=== All Java tests complete ==="
     @echo "E2E report:  java-automation/target/site/serenity/index.html"
     @echo "API report:  java-api-testing/target/site/serenity/index.html"
+    @echo "=== Stopping services ==="
+    @just stop
 
 # Run all test suites (backend pytest + Playwright E2E + Serenity Java + Serenity API)
 test-all:
