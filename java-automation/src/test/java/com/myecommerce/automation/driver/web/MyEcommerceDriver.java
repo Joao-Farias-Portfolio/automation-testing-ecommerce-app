@@ -250,6 +250,13 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     }
 
     private java.util.Optional<WebElement> findVisibleDeliverySection() {
+        waitUntilVisible("[data-testid='product-title']");
+        try {
+            new WebDriverWait(driver(), Duration.ofSeconds(5))
+                .until(_ -> !deliverySection().isEmpty());
+        } catch (org.openqa.selenium.TimeoutException _) {
+            return java.util.Optional.empty();
+        }
         var sections = deliverySection();
         if (sections.isEmpty() || !sections.getFirst().isDisplayed()) {
             return java.util.Optional.empty();
