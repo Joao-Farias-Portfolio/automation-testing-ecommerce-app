@@ -279,10 +279,248 @@ jobs:
           name: serenity-api-report
           path: java-automation/target/site/serenity/
 
-  # ── 7. Security scanning ─────────────────────────────────────────────────────
+  # ── 7. Java Web acceptance tests — Playwright browser adapter ────────────────
+  java-web-acceptance-playwright:
+    name: Java acceptance tests — Web channel (Serenity/Cucumber/Playwright)
+    needs: [backend-unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: gradle
+
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v5
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('java-automation/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
+
+      - run: uv python install
+
+      - name: Install backend deps
+        run: cd backend && uv sync --locked
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Install Playwright browsers and system deps
+        run: npx --yes playwright install --with-deps chromium
+
+      - name: Seed database and start services
+        run: |
+          cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          cd frontend && npx vite preview --host 0.0.0.0 --port 3001 &
+          sleep 5
+          cd backend && uv run python -m app.seed
+
+      - name: Run Serenity/Cucumber tests (Web channel, Playwright)
+        run: cd java-automation && ./gradlew test -Dchannel=Web -Dbrowser.impl=playwright
+
+      - name: Upload Serenity Web/Playwright report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: serenity-web-playwright-report
+          path: java-automation/target/site/serenity/
+
+  # ── 8. Java API acceptance tests — OkHttp adapter ────────────────────────────
+  java-api-acceptance-okhttp:
+    name: Java acceptance tests — API channel (OkHttp)
+    needs: [backend-unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: gradle
+
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v5
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('java-automation/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
+
+      - run: uv python install
+
+      - name: Install backend deps
+        run: cd backend && uv sync --locked
+
+      - name: Seed database and start backend
+        run: |
+          cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          sleep 5
+          cd backend && uv run python -m app.seed
+
+      - name: Run Serenity/Cucumber tests (API channel, OkHttp)
+        run: |
+          cd java-automation && ./gradlew test \
+            -Dchannel=API \
+            -Dhttp.impl=okhttp \
+            -Dcucumber.filter.tags="@api and not @wip"
+
+      - name: Upload Serenity API/OkHttp report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: serenity-api-okhttp-report
+          path: java-automation/target/site/serenity/
+
+  # ── 9. Playwright E2E — WireMock frontend isolation ──────────────────────────
+  e2e-browser-wiremock:
+    name: E2E browser tests — WireMock frontend isolation (Playwright)
+    needs: [static-analysis, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: echo "PLAYWRIGHT_VERSION=$(cd frontend && node -e "console.log(require('./package.json').devDependencies['@playwright/test'])")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.PLAYWRIGHT_VERSION }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: cd frontend && npx playwright install --with-deps
+
+      - name: Download WireMock standalone JAR
+        run: |
+          mkdir -p wiremock
+          curl -L -o wiremock/wiremock-standalone.jar \
+            https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.13.0/wiremock-standalone-3.13.0.jar
+
+      - name: Run Playwright tests (WireMock backend stub)
+        run: cd frontend && npx playwright test
+        env:
+          CI: true
+          WIREMOCK: "true"
+
+      - name: Upload Playwright/WireMock report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-wiremock-report
+          path: frontend/playwright-report/
+
+  # ── 10. Java Web acceptance — WireMock frontend isolation ────────────────────
+  java-web-acceptance-wiremock:
+    name: Java acceptance tests — Web channel (WireMock frontend isolation)
+    needs: [static-analysis, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: gradle
+
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v5
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('java-automation/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Download WireMock standalone JAR
+        run: |
+          mkdir -p wiremock
+          curl -L -o wiremock/wiremock-standalone.jar \
+            https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.13.0/wiremock-standalone-3.13.0.jar
+
+      - name: Start WireMock and frontend
+        run: |
+          java -jar wiremock/wiremock-standalone.jar \
+            --port 8001 --root-dir wiremock --no-request-journal &
+          cd frontend && npx vite preview --host 0.0.0.0 --port 3001 &
+          sleep 5
+
+      - name: Run Serenity/Cucumber tests (Web channel, WireMock stub)
+        run: cd java-automation && ./gradlew test -Dchannel=Web
+
+      - name: Upload Serenity Web/WireMock report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: serenity-web-wiremock-report
+          path: java-automation/target/site/serenity/
+
+  # ── 11. Security scanning ─────────────────────────────────────────────────────
   security-scan:
     name: Security scan (pip-audit + npm audit + OWASP)
-    needs: [e2e-browser, java-web-acceptance, java-api-acceptance]
+    needs:
+      - e2e-browser
+      - java-web-acceptance
+      - java-api-acceptance
+      - java-web-acceptance-playwright
+      - java-api-acceptance-okhttp
+      - e2e-browser-wiremock
+      - java-web-acceptance-wiremock
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
