@@ -1,0 +1,15 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/products/[0-9]+/image"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "image/jpeg" },
+        "bodyFileName": "fake-image.jpg"
+      }
+    }
+  ]
+}
