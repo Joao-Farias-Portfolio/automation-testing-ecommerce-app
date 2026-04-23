@@ -17,15 +17,14 @@ public class DeliveryOptionsSteps {
 
     @Given("the shopper has navigated to a product detail page")
     public void shopperHasNavigatedToProductDetailPage() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
-        protocol.clickFirstProductCard();
+        protocol.browseCatalogue();
+        protocol.viewFirstProduct();
         log.fine("navigated to first product detail page");
     }
 
     @When("the shopper selects a different delivery option")
     public void shopperSelectsDifferentDeliveryOption() {
-        protocol.selectAlternativeDeliveryOption();
+        protocol.chooseAlternativeDeliveryOption();
         log.fine("selected alternative delivery option");
     }
 
@@ -80,15 +79,10 @@ public class DeliveryOptionsSteps {
 
     @Then("the delivery section should have a header with delivery options text")
     public void deliverySectionShouldHaveHeader() {
-        var state = protocol.getDeliveryState();
-        if (!state.sectionVisible()) {
-            log.fine("delivery section not visible; skipping header check");
-            return;
-        }
-        assertThat(state.headerText())
+        assertThat(protocol.getDeliveryState().headerText())
             .as("delivery section header should contain 'delivery options'")
             .isNotBlank();
-        log.fine("delivery section header: '" + state.headerText() + "'");
+        log.fine("delivery section header check passed");
     }
 
     @Then("the product detail page should still be functional without delivery options")

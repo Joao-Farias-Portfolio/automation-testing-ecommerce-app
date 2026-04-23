@@ -16,14 +16,13 @@ public class BrowseProductsSteps {
 
     @Given("the shopper is on the homepage")
     public void shopperIsOnHomepage() {
-        protocol.openHomePage();
+        protocol.browseCatalogue();
         log.fine("opened home page");
     }
 
     @Given("the homepage has loaded with products")
     public void homepageHasLoadedWithProducts() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
+        protocol.browseCatalogue();
         log.fine("home page loaded with products");
     }
 

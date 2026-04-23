@@ -17,8 +17,7 @@ public class FilterSteps {
 
     @Given("the shopper is on the homepage with products visible")
     public void shopperOnHomepageWithProductsVisible() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
+        protocol.browseCatalogue();
         log.fine("home page loaded with products");
     }
 
@@ -40,7 +39,6 @@ public class FilterSteps {
 
     @Then("the URL should contain the search term")
     public void urlShouldContainSearchTerm() {
-        protocol.waitForSearchResultsToLoad();
         assertThat(protocol.currentUrl())
             .as("URL should contain the searched term")
             .contains("/search/" + capturedSearchTerm);
@@ -49,7 +47,6 @@ public class FilterSteps {
 
     @Then("search results should be displayed")
     public void searchResultsShouldBeDisplayed() {
-        protocol.waitForSearchResultsToLoad();
         assertThat(protocol.getSearchResults().cards())
             .as("search results should show at least one product card")
             .isNotEmpty();
@@ -58,7 +55,6 @@ public class FilterSteps {
 
     @Then("no results or empty state should be shown")
     public void noResultsOrEmptyStateShouldBeShown() {
-        protocol.waitForSearchResultsToLoad();
         var results = protocol.getSearchResults();
         assertThat(results.emptyStateVisible() || results.cards().isEmpty())
             .as("either no-results element or zero product cards expected")

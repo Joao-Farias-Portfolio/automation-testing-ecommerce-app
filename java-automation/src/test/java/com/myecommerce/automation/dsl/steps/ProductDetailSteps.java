@@ -19,10 +19,9 @@ public class ProductDetailSteps {
 
     @Given("the shopper is viewing the first product")
     public void shopperIsViewingFirstProduct() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
+        protocol.browseCatalogue();
         capturedListingTitle = protocol.getProductListing().cards().getFirst().title();
-        protocol.clickFirstProductCard();
+        protocol.viewFirstProduct();
         log.fine("navigated to first product detail; listing title was: '" + capturedListingTitle + "'");
     }
 
@@ -34,7 +33,7 @@ public class ProductDetailSteps {
 
     @When("the shopper clicks the first product card")
     public void shopperClicksFirstProductCard() {
-        protocol.clickFirstProductCard();
+        protocol.viewFirstProduct();
         log.fine("clicked first product card");
     }
 
@@ -46,8 +45,7 @@ public class ProductDetailSteps {
 
     @When("the shopper navigates back")
     public void shopperNavigatesBack() {
-        protocol.navigateBack();
-        protocol.waitForProductsToLoad();
+        protocol.returnToProductListing();
         log.fine("navigated back to product listing");
     }
 

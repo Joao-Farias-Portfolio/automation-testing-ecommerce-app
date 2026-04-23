@@ -36,8 +36,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     private static final String BASE_URL = "http://localhost:3001";
 
-    // ── Driver access ────────────────────────────────────────────────────────
-
     private WebDriver driver() {
         return BrowseTheWeb.as(OnStage.theActorCalled("Shopper")).getDriver();
     }
@@ -46,54 +44,54 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         OnStage.theActorCalled("Shopper").attemptsTo(Open.url(url));
     }
 
-    // ── Navigation ───────────────────────────────────────────────────────────
-
-    @Step("Navigate to home page")
+    @Step("Browse product catalogue")
     @Override
-    public void openHomePage() {
-        log.info("openHomePage: navigating to " + BASE_URL);
+    public void browseCatalogue() {
+        log.info("browseCatalogue: navigating to " + BASE_URL);
         navigateTo(BASE_URL);
-        log.fine("openHomePage: navigation complete");
     }
 
-    @Step("Navigate to cart page")
+    @Step("View cart")
     @Override
-    public void openCartPage() {
-        log.info("openCartPage: navigating to cart");
+    public void viewCart() {
+        log.info("viewCart: navigating to cart");
         navigateTo(BASE_URL + "/cart");
-        log.fine("openCartPage: navigation complete");
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.or(
+                ExpectedConditions.numberOfElementsToBeMoreThan(By.cssSelector("[data-testid='cart-item']"), 0),
+                ExpectedConditions.visibilityOfElementLocated(By.cssSelector("[data-testid='empty-cart']"))));
     }
 
-    @Step("Navigate to saved page")
+    @Step("View saved items")
     @Override
-    public void openSavedPage() {
-        log.info("openSavedPage: navigating to saved page");
+    public void viewSavedItems() {
+        log.info("viewSavedItems: navigating to saved page");
         navigateTo(BASE_URL + "/saved");
-        log.fine("openSavedPage: navigation complete");
+        waitUntilUrlContains("/saved");
     }
 
-    @Step("Navigate back")
+    @Step("Return to product listing")
     @Override
-    public void navigateBack() {
-        log.info("navigateBack: navigating browser back");
+    public void returnToProductListing() {
+        log.info("returnToProductListing: navigating browser back");
         driver().navigate().back();
-        log.fine("navigateBack: navigation complete");
     }
-
-    // ── Actions ──────────────────────────────────────────────────────────────
 
     @Step("Add product to cart")
     @Override
     public void addProductToCart() {
         log.info("addProductToCart: finding first enabled add-to-cart button");
         waitUntilMoreThan(0, "[data-testid='add-to-cart']");
+        var countBefore = readCartCount();
         var buttons = driver().findElements(By.cssSelector("[data-testid='add-to-cart']"));
         var firstEnabled = buttons.stream()
             .filter(WebElement::isEnabled)
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("No enabled add-to-cart button found"));
         firstEnabled.click();
-        log.fine("addProductToCart: clicked first enabled add-to-cart button");
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(_ -> readCartCount() > countBefore);
+        log.fine("addProductToCart: cart count increased from " + countBefore);
     }
 
     @Step("Remove first item from cart")
@@ -101,8 +99,11 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     public void removeFirstItemFromCart() {
         log.info("removeFirstItemFromCart: removing first cart item");
         waitUntilMoreThan(0, "[data-testid='remove-item']");
+        var countBefore = readCartCount();
         driver().findElements(By.cssSelector("[data-testid='remove-item']")).getFirst().click();
-        log.fine("removeFirstItemFromCart: first cart item removed");
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(_ -> readCartCount() < countBefore || isCartEmptyStateVisible());
+        log.fine("removeFirstItemFromCart: item removed");
     }
 
     @Step("Change quantity to {0}")
@@ -110,9 +111,12 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     public void changeQuantityTo(int quantity) {
         log.info("changeQuantityTo: setting quantity to " + quantity);
         waitUntilPresent("[data-testid='quantity-display']");
+        var totalBefore = readCartTotal();
         var input = driver().findElement(By.cssSelector("[data-testid='quantity-display']"));
         setReactInputValue(input, String.valueOf(quantity));
-        log.fine("changeQuantityTo: quantity set to " + quantity);
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(_ -> !readCartTotal().equals(totalBefore));
+        log.fine("changeQuantityTo: total updated from '" + totalBefore + "'");
     }
 
     @Step("Search for '{0}'")
@@ -123,26 +127,25 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         searchInput.clear();
         searchInput.sendKeys(term);
         searchInput.sendKeys(Keys.ENTER);
-        log.fine("searchFor: search submitted for '" + term + "'");
+        waitUntilUrlContains("/search/");
     }
 
-    @Step("Click first product card")
+    @Step("View first product")
     @Override
-    public void clickFirstProductCard() {
-        log.info("clickFirstProductCard: clicking first product card");
+    public void viewFirstProduct() {
+        log.info("viewFirstProduct: clicking first product card");
         waitUntilVisible("[data-testid='product-card']");
         driver().findElements(By.cssSelector("[data-testid='product-card']")).getFirst().click();
         waitUntilUrlMatches(".*/products/\\d+");
-        log.fine("clickFirstProductCard: navigated to product detail page");
     }
 
-    @Step("Select alternative delivery option")
+    @Step("Choose alternative delivery option")
     @Override
-    public void selectAlternativeDeliveryOption() {
-        log.info("selectAlternativeDeliveryOption: selecting a non-currently-selected delivery option");
+    public void chooseAlternativeDeliveryOption() {
+        log.info("chooseAlternativeDeliveryOption: selecting a non-currently-selected delivery option");
         var section = deliverySection();
         if (section.isEmpty()) {
-            log.warning("selectAlternativeDeliveryOption: no delivery section found");
+            log.warning("chooseAlternativeDeliveryOption: no delivery section found");
             return;
         }
         var radios = section.getFirst().findElements(By.cssSelector("input[type='radio']"));
@@ -152,32 +155,37 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         unselected.ifPresentOrElse(
             radio -> {
                 radio.findElement(By.xpath("../..")).click();
-                log.fine("selectAlternativeDeliveryOption: clicked unselected delivery option");
+                log.fine("chooseAlternativeDeliveryOption: clicked unselected delivery option");
             },
-            () -> log.warning("selectAlternativeDeliveryOption: all options are already selected"));
+            () -> log.warning("chooseAlternativeDeliveryOption: all options are already selected"));
     }
 
-    @Step("Toggle first save button")
+    @Step("Ensure first product is saved")
     @Override
-    public void toggleFirstSaveButton() {
-        log.info("toggleFirstSaveButton: toggling first save button");
+    public void ensureFirstProductIsSaved() {
+        waitUntilVisible("[data-testid='save-button']");
+        if (!isAriaPressed(driver().findElements(By.cssSelector("[data-testid='save-button']")).getFirst())) {
+            toggleSaveStateOfFirstProduct();
+        }
+    }
+
+    @Step("Toggle save state of first product")
+    @Override
+    public void toggleSaveStateOfFirstProduct() {
+        log.info("toggleSaveStateOfFirstProduct: toggling first save button");
         var button = driver().findElements(By.cssSelector("[data-testid='save-button']")).getFirst();
         var previousState = button.getAttribute("aria-pressed");
         button.click();
         waitForAriaPressed(button, previousState);
-        log.fine("toggleFirstSaveButton: save button toggled from aria-pressed=" + previousState);
     }
 
-    @Step("Click wishlist link")
+    @Step("View wishlist")
     @Override
-    public void clickWishlistLink() {
-        log.info("clickWishlistLink: clicking wishlist link");
+    public void viewWishlist() {
+        log.info("viewWishlist: clicking wishlist link");
         driver().findElement(By.cssSelector("[data-testid='wishlist-link']")).click();
         waitUntilUrlContains("/saved");
-        log.fine("clickWishlistLink: navigated to saved page");
     }
-
-    // ── Queries ──────────────────────────────────────────────────────────────
 
     @Override
     public ProductListing getProductListing() {
@@ -268,6 +276,11 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public SavedState getSavedState() {
         log.info("getSavedState: reading saved state");
+        new WebDriverWait(driver(), Duration.ofSeconds(10))
+            .until(ExpectedConditions.or(
+                ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='product-card']")),
+                ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='save-button']")),
+                ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='wishlist-link']"))));
         var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
         boolean present = !saveButtons.isEmpty();
         boolean pressed = present && isAriaPressed(saveButtons.getFirst());
@@ -289,69 +302,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         log.fine("currentUrl: " + url);
         return url;
     }
-
-    // ── Synchronization ──────────────────────────────────────────────────────
-
-    @Override
-    public void waitForCartCountToBe(int expected) {
-        log.info("waitForCartCountToBe: waiting for cart count to be " + expected);
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.textToBe(
-                By.cssSelector("[data-testid='cart-count']"), String.valueOf(expected)));
-        log.fine("waitForCartCountToBe: cart count is now " + expected);
-    }
-
-    @Override
-    public void waitForCartTotalToChange(String previousTotal) {
-        log.info("waitForCartTotalToChange: waiting for total to change from '" + previousTotal + "'");
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(_ -> {
-                var totals = driver().findElements(By.cssSelector("[data-testid='cart-total']"));
-                return !totals.isEmpty() && !totals.getFirst().getText().trim().equals(previousTotal);
-            });
-        log.fine("waitForCartTotalToChange: total has changed from '" + previousTotal + "'");
-    }
-
-    @Override
-    public void waitForCartToBeEmpty() {
-        log.info("waitForCartToBeEmpty: waiting for empty cart state");
-        new WebDriverWait(driver(), Duration.ofSeconds(15))
-            .until(ExpectedConditions.visibilityOfElementLocated(
-                By.cssSelector("[data-testid='empty-cart']")));
-        log.fine("waitForCartToBeEmpty: empty cart state is visible");
-    }
-
-    @Override
-    public void waitForCartItemsToAppear() {
-        log.info("waitForCartItemsToAppear: waiting for cart items to appear");
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.numberOfElementsToBeMoreThan(
-                By.cssSelector("[data-testid='cart-item']"), 0));
-        log.fine("waitForCartItemsToAppear: cart items are visible");
-    }
-
-    @Override
-    public void waitForProductsToLoad() {
-        log.info("waitForProductsToLoad: waiting for product cards");
-        waitUntilVisible("[data-testid='product-card']");
-        log.fine("waitForProductsToLoad: product cards are visible");
-    }
-
-    @Override
-    public void waitForSearchResultsToLoad() {
-        log.info("waitForSearchResultsToLoad: waiting for search URL");
-        waitUntilUrlContains("/search/");
-        log.fine("waitForSearchResultsToLoad: on search results page");
-    }
-
-    @Override
-    public void waitForSavedPageToLoad() {
-        log.info("waitForSavedPageToLoad: waiting for saved page URL");
-        waitUntilUrlContains("/saved");
-        log.fine("waitForSavedPageToLoad: on saved page");
-    }
-
-    // ── Browse helpers ───────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
     private List<ProductCard> extractProductCardsViaJavascript() {
@@ -375,8 +325,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
             .anyMatch(this::safeIsDisplayed);
     }
 
-    // ── Cart helpers ─────────────────────────────────────────────────────────
-
     private int readCartCount() {
         var badges = driver().findElements(By.cssSelector("[data-testid='cart-count']"));
         if (badges.isEmpty()) return 0;
@@ -399,8 +347,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     private boolean isCartEmptyStateVisible() {
         return !driver().findElements(By.cssSelector("[data-testid='empty-cart']")).isEmpty();
     }
-
-    // ── Delivery helpers ─────────────────────────────────────────────────────
 
     private static final String DELIVERY_SELECTOR =
         "[data-testid='delivery-section'], [data-testid='delivery-options'], " +
@@ -428,8 +374,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
             By.xpath("//*[contains(text(), 'Minimum order') or contains(text(), 'Min order')]")).isEmpty();
     }
 
-    // ── Saved helpers ────────────────────────────────────────────────────────
-
     private int readSavedCount() {
         var counts = driver().findElements(By.cssSelector("[data-testid='saved-count']"));
         if (counts.isEmpty()) return 0;
@@ -441,8 +385,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         new WebDriverWait(driver(), Duration.ofSeconds(5))
             .until(_ -> !previousValue.equals(button.getAttribute("aria-pressed")));
     }
-
-    // ── DOM utilities ────────────────────────────────────────────────────────
 
     private void waitUntilVisible(String css) {
         new WebDriverWait(driver(), Duration.ofSeconds(10))
@@ -467,10 +409,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     private void waitUntilUrlMatches(String regex) {
         new WebDriverWait(driver(), Duration.ofSeconds(10))
             .until(ExpectedConditions.urlMatches(regex));
-    }
-
-    private void clickAtIndex(String css, int index) {
-        driver().findElements(By.cssSelector(css)).get(index).click();
     }
 
     private String textOf(String css) {
