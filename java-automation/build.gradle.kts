@@ -21,6 +21,8 @@ dependencies {
     testImplementation("net.serenity-bdd:serenity-cucumber")
     testImplementation("io.github.bonigarcia:webdrivermanager:6.1.0")
     testImplementation("net.serenity-bdd:serenity-rest-assured")
+    testImplementation("com.microsoft.playwright:playwright:1.44.0")
+    testImplementation("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.junit.platform:junit-platform-suite:1.14.3")
     testImplementation("io.cucumber:cucumber-junit-platform-engine:7.34.2")
