@@ -3,13 +3,7 @@ package com.myecommerce.automation.dsl.protocols;
 import org.apache.commons.lang3.StringUtils;
 
 public enum Channel {
-    WEB("Web"), API("API");
-
-    public final String registrationKey;
-
-    Channel(String registrationKey) {
-        this.registrationKey = registrationKey;
-    }
+    WEB, API;
 
     private static Channel instance;
 

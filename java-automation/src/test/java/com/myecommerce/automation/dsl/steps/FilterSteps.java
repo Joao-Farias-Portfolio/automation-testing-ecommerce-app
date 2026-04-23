@@ -1,7 +1,7 @@
 package com.myecommerce.automation.dsl.steps;
 
+import com.myecommerce.automation.dsl.protocols.CatalogueProtocol;
 import com.myecommerce.automation.dsl.protocols.DriverFactory;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class FilterSteps {
 
-    private final MyEcommerceProtocol protocol = DriverFactory.create();
+    private final CatalogueProtocol protocol = DriverFactory.createCatalogue();
     private String capturedSearchTerm;
 
     @Given("the shopper is on the homepage with products visible")

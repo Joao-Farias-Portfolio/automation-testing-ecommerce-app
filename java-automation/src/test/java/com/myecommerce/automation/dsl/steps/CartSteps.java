@@ -1,7 +1,7 @@
 package com.myecommerce.automation.dsl.steps;
 
+import com.myecommerce.automation.dsl.protocols.CartProtocol;
 import com.myecommerce.automation.dsl.protocols.DriverFactory;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -13,15 +13,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class CartSteps {
 
-    private final MyEcommerceProtocol protocol = DriverFactory.create();
+    private final CartProtocol protocol = DriverFactory.createCart();
     private int    notedItemCount;
     private String notedTotal;
-
-    @Given("the shopper is on the homepage with products loaded")
-    public void shopperOnHomepageWithProductsLoaded() {
-        protocol.browseCatalogue();
-        log.fine("home page loaded with products");
-    }
 
     @Given("the shopper notes the current cart count")
     public void shopperNotesCurrentCartCount() {

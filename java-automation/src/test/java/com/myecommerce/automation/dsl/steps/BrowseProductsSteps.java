@@ -1,7 +1,7 @@
 package com.myecommerce.automation.dsl.steps;
 
+import com.myecommerce.automation.dsl.protocols.CatalogueProtocol;
 import com.myecommerce.automation.dsl.protocols.DriverFactory;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import lombok.extern.java.Log;
@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class BrowseProductsSteps {
 
-    private final MyEcommerceProtocol protocol = DriverFactory.create();
+    private final CatalogueProtocol protocol = DriverFactory.createCatalogue();
 
     @Given("the shopper is on the homepage")
     public void shopperIsOnHomepage() {
@@ -22,6 +22,12 @@ public class BrowseProductsSteps {
 
     @Given("the homepage has loaded with products")
     public void homepageHasLoadedWithProducts() {
+        protocol.browseCatalogue();
+        log.fine("home page loaded with products");
+    }
+
+    @Given("the shopper is on the homepage with products loaded")
+    public void shopperOnHomepageWithProductsLoaded() {
         protocol.browseCatalogue();
         log.fine("home page loaded with products");
     }

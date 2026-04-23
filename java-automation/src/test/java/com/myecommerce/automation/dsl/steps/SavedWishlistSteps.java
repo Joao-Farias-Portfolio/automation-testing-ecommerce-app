@@ -1,7 +1,7 @@
 package com.myecommerce.automation.dsl.steps;
 
 import com.myecommerce.automation.dsl.protocols.DriverFactory;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
+import com.myecommerce.automation.dsl.protocols.SavedProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class SavedWishlistSteps {
 
-    private final MyEcommerceProtocol protocol = DriverFactory.create();
+    private final SavedProtocol protocol = DriverFactory.createSaved();
     private boolean initialSaveState;
 
     @Given("the shopper is on the homepage with save buttons visible")
