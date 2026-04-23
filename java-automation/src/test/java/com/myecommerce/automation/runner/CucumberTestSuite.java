@@ -1,4 +1,4 @@
-package com.lineasupply.automation.runner;
+package com.myecommerce.automation.runner;
 
 import io.cucumber.junit.CucumberOptions;
 import net.serenitybdd.cucumber.CucumberWithSerenity;
@@ -7,7 +7,7 @@ import org.junit.runner.RunWith;
 @RunWith(CucumberWithSerenity.class)
 @CucumberOptions(
     features = "src/test/resources/features",
-    glue = "com.lineasupply.automation",
+    glue = "com.myecommerce.automation",
     tags = "not @wip",
     plugin = {"pretty"}
 )

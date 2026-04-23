@@ -1,16 +1,16 @@
-package com.lineasupply.automation.driver.web;
+package com.myecommerce.automation.driver.web;
 
-import com.lineasupply.automation.dsl.protocols.DriverRegistry;
-import com.lineasupply.automation.dsl.protocols.LineasupplyProtocol;
-import com.lineasupply.automation.dsl.domain.CartItem;
-import com.lineasupply.automation.dsl.domain.CartState;
-import com.lineasupply.automation.dsl.domain.DeliveryOption;
-import com.lineasupply.automation.dsl.domain.DeliveryState;
-import com.lineasupply.automation.dsl.domain.ProductCard;
-import com.lineasupply.automation.dsl.domain.ProductDetail;
-import com.lineasupply.automation.dsl.domain.ProductListing;
-import com.lineasupply.automation.dsl.domain.SavedState;
-import com.lineasupply.automation.dsl.domain.SearchResults;
+import com.myecommerce.automation.dsl.protocols.DriverRegistry;
+import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
+import com.myecommerce.automation.dsl.domain.CartItem;
+import com.myecommerce.automation.dsl.domain.CartState;
+import com.myecommerce.automation.dsl.domain.DeliveryOption;
+import com.myecommerce.automation.dsl.domain.DeliveryState;
+import com.myecommerce.automation.dsl.domain.ProductCard;
+import com.myecommerce.automation.dsl.domain.ProductDetail;
+import com.myecommerce.automation.dsl.domain.ProductListing;
+import com.myecommerce.automation.dsl.domain.SavedState;
+import com.myecommerce.automation.dsl.domain.SearchResults;
 import lombok.extern.java.Log;
 import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.Map;
 
 @Log
-public final class LineasupplyDriver implements LineasupplyProtocol {
+public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     static {
-        DriverRegistry.register("Web", LineasupplyDriver::new);
+        DriverRegistry.register("Web", MyEcommerceDriver::new);
     }
 
     private static final String BASE_URL = "http://localhost:3001";

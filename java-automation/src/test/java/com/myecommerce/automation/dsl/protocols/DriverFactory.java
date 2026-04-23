@@ -1,11 +1,11 @@
-package com.lineasupply.automation.dsl.steps;
+package com.myecommerce.automation.dsl.protocols;
 
-import com.lineasupply.automation.dsl.protocols.DriverRegistry;
-import com.lineasupply.automation.dsl.protocols.LineasupplyProtocol;
+import com.myecommerce.automation.dsl.protocols.DriverRegistry;
+import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 
 public class DriverFactory {
 
-    public static LineasupplyProtocol create() {
+    public static MyEcommerceProtocol create() {
         String channel = System.getProperty("channel");
         if (channel == null || channel.isBlank()) {
             throw new IllegalStateException(
