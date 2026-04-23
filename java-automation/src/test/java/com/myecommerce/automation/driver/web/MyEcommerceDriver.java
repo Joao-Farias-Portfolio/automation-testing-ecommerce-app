@@ -24,7 +24,12 @@ import java.util.stream.IntStream;
 public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     static {
-        DriverRegistry.register(Channel.WEB, () -> new MyEcommerceDriver(new SeleniumBrowserPort()));
+        DriverRegistry.register(Channel.WEB, () -> {
+            BrowserPort browser = "playwright".equals(System.getProperty("browser.impl", "selenium"))
+                ? PlaywrightBrowserPort.fromCurrentPage()
+                : new SeleniumBrowserPort();
+            return new MyEcommerceDriver(browser);
+        });
     }
 
     private static final String BASE_URL = "http://localhost:3001";
@@ -260,7 +265,7 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     private Optional<String> findVisibleDeliverySection() {
         browser.waitUntilVisible("[data-testid='product-title']");
-        boolean found = ((SeleniumBrowserPort) browser).tryWaitUntilPresent(DELIVERY_SELECTOR, 5);
+        boolean found = browser.tryWaitUntilPresent(DELIVERY_SELECTOR, 5);
         if (!found || !browser.isVisible(DELIVERY_SELECTOR)) {
             return Optional.empty();
         }

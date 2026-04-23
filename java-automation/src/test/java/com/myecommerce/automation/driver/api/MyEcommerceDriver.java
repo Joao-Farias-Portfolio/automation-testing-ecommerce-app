@@ -21,7 +21,12 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
     private static final String BASE_URL = "http://localhost:8001";
 
     static {
-        DriverRegistry.register(Channel.API, () -> new MyEcommerceDriver(new RestAssuredHttpPort(BASE_URL)));
+        DriverRegistry.register(Channel.API, () -> {
+            HttpPort http = "okhttp".equals(System.getProperty("http.impl", "restassured"))
+                ? new OkHttpHttpPort(BASE_URL)
+                : new RestAssuredHttpPort(BASE_URL);
+            return new MyEcommerceDriver(http);
+        });
     }
 
     private final HttpPort http;

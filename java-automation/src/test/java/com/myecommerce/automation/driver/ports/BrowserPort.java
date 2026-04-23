@@ -52,4 +52,5 @@ public interface BrowserPort {
     void waitUntilAttributeChanges(String css, int index, String attr, String previousValue);
     void waitUntilAnyPresent(String... cssList);
     void waitUntilCondition(Supplier<Boolean> condition, int timeoutSeconds);
+    boolean tryWaitUntilPresent(String css, int timeoutSeconds);
 }
