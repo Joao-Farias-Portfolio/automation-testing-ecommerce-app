@@ -1,5 +1,6 @@
 package com.myecommerce.automation.hooks;
 
+import com.myecommerce.automation.dsl.protocols.Channel;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.github.bonigarcia.wdm.WebDriverManager;
@@ -13,10 +14,14 @@ import org.openqa.selenium.chrome.ChromeOptions;
 
 public class Hooks {
 
+    private static final boolean WEB_CHANNEL =
+        Channel.current() == Channel.WEB;
+
     private WebDriver driver;
 
     @Before(order = 1)
     public void setUpStage() {
+        if (!WEB_CHANNEL) return;
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         boolean headed = Boolean.parseBoolean(System.getProperty("headed", "false"));
@@ -37,6 +42,7 @@ public class Hooks {
 
     @Before(order = 2)
     public void clearCartState() {
+        if (!WEB_CHANNEL) return;
         driver.get("http://localhost:3001");
         ((JavascriptExecutor) driver).executeScript(
             "try {" +
@@ -49,6 +55,7 @@ public class Hooks {
 
     @After
     public void tearDownStage() {
+        if (!WEB_CHANNEL) return;
         OnStage.drawTheCurtain();
         if (driver != null) {
             driver.quit();
