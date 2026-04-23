@@ -31,7 +31,7 @@ public final class DriverRegistry {
             .formatted(channel.name().toLowerCase());
         try {
             Class.forName(className);
-        } catch (ClassNotFoundException _) { }
+        } catch (ClassNotFoundException ignored) { }
     }
 
     private DriverRegistry() {}
