@@ -3,16 +3,15 @@ package com.myecommerce.automation.driver.api;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.myecommerce.automation.dsl.domain.CartState;
 import com.myecommerce.automation.dsl.domain.DeliveryOption;
 import com.myecommerce.automation.dsl.domain.DeliveryState;
 import com.myecommerce.automation.dsl.domain.ProductCard;
 import com.myecommerce.automation.dsl.domain.ProductDetail;
 import com.myecommerce.automation.dsl.domain.ProductListing;
-import com.myecommerce.automation.dsl.domain.SavedState;
 import com.myecommerce.automation.dsl.domain.SearchResults;
+import com.myecommerce.automation.dsl.protocols.CatalogueProtocol;
+import com.myecommerce.automation.dsl.protocols.Channel;
 import com.myecommerce.automation.dsl.protocols.DriverRegistry;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import io.restassured.RestAssured;
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.config.ObjectMapperConfig;
@@ -23,10 +22,10 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 @Log
-public final class MyEcommerceDriver implements MyEcommerceProtocol {
+public final class MyEcommerceDriver implements CatalogueProtocol {
 
     static {
-        DriverRegistry.register("API", MyEcommerceDriver::new);
+        DriverRegistry.register(Channel.API, MyEcommerceDriver::new);
         RestAssured.config = RestAssured.config().objectMapperConfig(
             ObjectMapperConfig.objectMapperConfig()
                 .jackson2ObjectMapperFactory((cls, charset) ->
@@ -42,21 +41,12 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     @Override public void browseCatalogue() {}
     @Override public void returnToProductListing() {}
-
-    @Override
-    public void viewCart() {
-        throw unsupported("Cart page");
-    }
-
-    @Override
-    public void viewSavedItems() {
-        throw unsupported("Saved page");
-    }
+    @Override public void chooseAlternativeDeliveryOption() {}
 
     @Override
     public void viewFirstProduct() {
         this.currentProductId = fetchProducts("").getFirst().id();
-        log.info("selected product id=" + currentProductId);
+        log.info("selected product id=%d".formatted(currentProductId));
     }
 
     @Override
@@ -64,27 +54,19 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         this.lastSearchTerm = term;
     }
 
-    @Override public void addProductToCart()                   { throw unsupported("Cart"); }
-    @Override public void removeFirstItemFromCart()            { throw unsupported("Cart"); }
-    @Override public void changeQuantityTo(int qty)            { throw unsupported("Cart"); }
-    @Override public void chooseAlternativeDeliveryOption()    { throw unsupported("Delivery option selection"); }
-    @Override public void ensureFirstProductIsSaved()          { throw unsupported("Save button"); }
-    @Override public void toggleSaveStateOfFirstProduct()      { throw unsupported("Save button"); }
-    @Override public void viewWishlist()                       { throw unsupported("Wishlist link"); }
-
     @Override
     public ProductListing getProductListing() {
         var cards = fetchProducts("").stream()
             .map(product -> new ProductCard(product.title(), formatPrice(product.price()), absoluteImageUrl(product.imageUrl())))
             .toList();
-        log.info(cards.size() + " products");
+        log.info("%d products".formatted(cards.size()));
         return new ProductListing(cards, false);
     }
 
     @Override
     public ProductDetail getProductDetail() {
         var product = fetchProductDetail(currentProductId);
-        log.info("title='" + product.title() + "'");
+        log.info("title='%s'".formatted(product.title()));
         return ProductDetail.builder()
             .title(product.title())
             .price(formatPrice(product.price()))
@@ -107,12 +89,11 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
                 .minimumOrderTextPresent(false)
                 .build();
         }
-        log.info(activeDeliveryOptions.size() + " active delivery options");
+        log.info("%d active delivery options".formatted(activeDeliveryOptions.size()));
         return DeliveryState.builder()
             .sectionVisible(true)
             .options(toDeliveryOptions(activeDeliveryOptions))
             .headerText("Delivery Options")
-            // Frontend never renders min_order_amount — always false regardless of backend data
             .minimumOrderTextPresent(false)
             .build();
     }
@@ -122,12 +103,9 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         var cards = fetchProducts(lastSearchTerm).stream()
             .map(product -> new ProductCard(product.title(), formatPrice(product.price()), absoluteImageUrl(product.imageUrl())))
             .toList();
-        log.info(cards.size() + " results for '" + lastSearchTerm + "'");
+        log.info("%d results for '%s'".formatted(cards.size(), lastSearchTerm));
         return new SearchResults(cards, cards.isEmpty());
     }
-
-    @Override public CartState getCartState()   { throw unsupported("Cart state"); }
-    @Override public SavedState getSavedState() { throw unsupported("Save state"); }
 
     @Override
     public String currentUrl() {
@@ -173,10 +151,5 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         if (imageUrl == null || imageUrl.isBlank()) return "";
         if (imageUrl.startsWith("http")) return imageUrl;
         return BASE_URL + imageUrl;
-    }
-
-    private UnsupportedOperationException unsupported(String feature) {
-        return new UnsupportedOperationException(
-            feature + " operations require the Web channel — run with -Dchannel=Web");
     }
 }

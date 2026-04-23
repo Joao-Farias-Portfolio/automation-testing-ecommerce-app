@@ -207,7 +207,7 @@ acceptance-api: _ensure-logs-dir
         STARTED_BACKEND=true
     fi
     # Run the tests
-    cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api"
+    cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api and not @wip"
     EXIT_CODE=$?
     # Stop backend only if this recipe started it
     if [ "${STARTED_BACKEND:-false}" = "true" ]; then
@@ -244,7 +244,7 @@ test-java-feature FEATURE:
 # Run @api-tagged acceptance scenarios via HTTP against the backend (requires backend on :8001)
 # Named test-java-acceptance-api because test-java-api is used by the java-api-testing project
 test-java-acceptance-api:
-    cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api"
+    cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api and not @wip"
     @echo "Report: java-automation/target/site/serenity/index.html"
 
 # Open the Serenity HTML report

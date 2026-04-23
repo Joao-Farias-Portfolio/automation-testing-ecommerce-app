@@ -1,5 +1,6 @@
 package com.myecommerce.automation.driver.web;
 
+import com.myecommerce.automation.dsl.protocols.Channel;
 import com.myecommerce.automation.dsl.protocols.DriverRegistry;
 import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import com.myecommerce.automation.dsl.domain.CartItem;
@@ -31,7 +32,7 @@ import java.util.Map;
 public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     static {
-        DriverRegistry.register("Web", MyEcommerceDriver::new);
+        DriverRegistry.register(Channel.WEB, MyEcommerceDriver::new);
     }
 
     private static final String BASE_URL = "http://localhost:3001";
@@ -240,21 +241,36 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public DeliveryState getDeliveryState() {
         log.info("getDeliveryState: reading delivery section");
-        var sections = deliverySection();
-        boolean visible = !sections.isEmpty() && sections.getFirst().isDisplayed();
-        if (!visible) {
+        var section = findVisibleDeliverySection();
+        if (section.isEmpty()) {
             log.info("getDeliveryState: delivery section not visible");
-            return DeliveryState.builder()
-                .sectionVisible(false)
-                .options(List.of())
-                .headerText("")
-                .minimumOrderTextPresent(false)
-                .build();
+            return absentDeliveryState();
         }
-        var options = readDeliveryOptions(sections.getFirst());
+        return presentDeliveryState(section.get());
+    }
+
+    private java.util.Optional<WebElement> findVisibleDeliverySection() {
+        var sections = deliverySection();
+        if (sections.isEmpty() || !sections.getFirst().isDisplayed()) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(sections.getFirst());
+    }
+
+    private DeliveryState absentDeliveryState() {
+        return DeliveryState.builder()
+            .sectionVisible(false)
+            .options(List.of())
+            .headerText("")
+            .minimumOrderTextPresent(false)
+            .build();
+    }
+
+    private DeliveryState presentDeliveryState(WebElement section) {
+        var options = readDeliveryOptions(section);
         var header = readDeliveryHeader();
         boolean minimumOrderPresent = minimumOrderTextPresent();
-        log.info("getDeliveryState: visible=true, options=" + options.size() + ", header='" + header + "'");
+        log.info("getDeliveryState: visible=true, options=%d, header='%s'".formatted(options.size(), header));
         return DeliveryState.builder()
             .sectionVisible(true)
             .options(options)
@@ -276,20 +292,32 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public SavedState getSavedState() {
         log.info("getSavedState: reading saved state");
+        waitForSavedPageReady();
+        var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
+        return buildSavedState(saveButtons);
+    }
+
+    private void waitForSavedPageReady() {
         new WebDriverWait(driver(), Duration.ofSeconds(10))
             .until(ExpectedConditions.or(
                 ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='product-card']")),
                 ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='save-button']")),
                 ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='wishlist-link']"))));
-        var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
+    }
+
+    private SavedState buildSavedState(List<WebElement> saveButtons) {
         boolean present = !saveButtons.isEmpty();
         boolean pressed = present && isAriaPressed(saveButtons.getFirst());
         boolean enabled = present && saveButtons.getFirst().isEnabled();
         int savedCount = readSavedCount();
-        boolean wishlistLinkVisible = !driver().findElements(By.cssSelector("[data-testid='wishlist-link']")).isEmpty();
+        boolean wishlistLinkVisible = isWishlistLinkVisible();
         log.info("getSavedState: present=%b, pressed=%b, enabled=%b, count=%d"
             .formatted(present, pressed, enabled, savedCount));
         return new SavedState(present, pressed, enabled, savedCount, wishlistLinkVisible);
+    }
+
+    private boolean isWishlistLinkVisible() {
+        return !driver().findElements(By.cssSelector("[data-testid='wishlist-link']")).isEmpty();
     }
 
     private boolean isAriaPressed(WebElement el) {
@@ -359,8 +387,13 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     private List<DeliveryOption> readDeliveryOptions(WebElement section) {
         return section.findElements(By.cssSelector("input[type='radio']"))
             .stream()
-            .map(radio -> new DeliveryOption(radio.getText(), radio.isSelected()))
+            .map(radio -> new DeliveryOption(radioOptionId(radio), radio.isSelected()))
             .toList();
+    }
+
+    private String radioOptionId(WebElement radio) {
+        String val = radio.getAttribute("value");
+        return val != null ? val : "";
     }
 
     private String readDeliveryHeader() {

@@ -1,7 +1,7 @@
 package com.myecommerce.automation.dsl.steps;
 
+import com.myecommerce.automation.dsl.protocols.CatalogueProtocol;
 import com.myecommerce.automation.dsl.protocols.DriverFactory;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -13,13 +13,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class DeliveryOptionsSteps {
 
-    private final MyEcommerceProtocol protocol = DriverFactory.create();
+    private final CatalogueProtocol protocol = DriverFactory.createCatalogue();
+    private String notedSelectedDeliveryOption;
 
     @Given("the shopper has navigated to a product detail page")
     public void shopperHasNavigatedToProductDetailPage() {
         protocol.browseCatalogue();
         protocol.viewFirstProduct();
         log.fine("navigated to first product detail page");
+    }
+
+    @When("the shopper notes the currently selected delivery option")
+    public void shopperNotesCurrentlySelectedDeliveryOption() {
+        notedSelectedDeliveryOption = protocol.getDeliveryState().options().stream()
+            .filter(o -> o.selected())
+            .map(o -> o.label())
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No delivery option is currently selected"));
+        log.fine("noted selected delivery option: '%s'".formatted(notedSelectedDeliveryOption));
     }
 
     @When("the shopper selects a different delivery option")
@@ -42,7 +53,7 @@ public class DeliveryOptionsSteps {
         assertThat(options)
             .as("delivery section should contain radio button options")
             .isNotEmpty();
-        log.fine("delivery section has " + options.size() + " radio options");
+        log.fine("delivery section has %d radio options".formatted(options.size()));
     }
 
     @Then("one delivery option should be selected by default")
@@ -66,7 +77,15 @@ public class DeliveryOptionsSteps {
         assertThat(state.selectedOptionCount())
             .as("exactly one delivery option should be selected after changing")
             .isEqualTo(1L);
-        log.fine("a delivery option is selected after changing");
+        String nowSelected = state.options().stream()
+            .filter(o -> o.selected())
+            .map(o -> o.label())
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No delivery option is selected after changing"));
+        assertThat(nowSelected)
+            .as("selected delivery option should have changed from '%s'".formatted(notedSelectedDeliveryOption))
+            .isNotEqualTo(notedSelectedDeliveryOption);
+        log.fine("delivery option changed from '%s' to '%s'".formatted(notedSelectedDeliveryOption, nowSelected));
     }
 
     @Then("no minimum order restrictions should be shown")
