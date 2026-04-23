@@ -247,6 +247,50 @@ test-java-acceptance-api:
     cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api and not @wip"
     @echo "Report: java-automation/target/site/serenity/index.html"
 
+# Web channel using Playwright instead of Selenium (headless by default)
+acceptance-web-playwright:
+    cd java-automation && ./gradlew test -Dchannel=Web -Dbrowser.impl=playwright
+    @echo "Report: java-automation/target/site/serenity/index.html"
+
+# Web channel using Playwright, headed browser (for debugging)
+acceptance-web-playwright-headed:
+    cd java-automation && ./gradlew test -Dchannel=Web -Dbrowser.impl=playwright -Dheaded=true
+    @echo "Report: java-automation/target/site/serenity/index.html"
+
+# API channel using OkHttp instead of REST Assured (8 @api scenarios)
+acceptance-api-okhttp: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
+        for i in $(seq 1 20); do
+            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
+            sleep 0.5
+        done
+        STARTED_BACKEND=true
+    fi
+    cd java-automation && ./gradlew test -Dchannel=API -Dhttp.impl=okhttp -Dcucumber.filter.tags="@api and not @wip"
+    EXIT_CODE=$?
+    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+        echo "Stopping backend ..."
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: java-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
+
+# Run Web channel with both Selenium and Playwright (adapter comparison)
+acceptance-web-all-adapters:
+    just acceptance-web
+    just acceptance-web-playwright
+
+# Run API channel with both REST Assured and OkHttp (adapter comparison)
+acceptance-api-all-adapters: _ensure-logs-dir
+    just acceptance-api
+    just acceptance-api-okhttp
+
 # Open the Serenity HTML report
 report-java:
     @open java-automation/target/site/serenity/index.html
