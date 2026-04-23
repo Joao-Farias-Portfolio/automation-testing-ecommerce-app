@@ -1,4 +1,4 @@
-package com.lineasupply.automation.stepdefinitions;
+package com.lineasupply.automation.dsl.steps;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;

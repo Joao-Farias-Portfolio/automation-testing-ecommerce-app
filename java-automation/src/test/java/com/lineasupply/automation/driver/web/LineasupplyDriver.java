@@ -1,6 +1,7 @@
 package com.lineasupply.automation.driver.web;
 
-import com.lineasupply.automation.dsl.LineasupplyProtocol;
+import com.lineasupply.automation.dsl.protocols.DriverRegistry;
+import com.lineasupply.automation.dsl.protocols.LineasupplyProtocol;
 import com.lineasupply.automation.dsl.domain.CartItem;
 import com.lineasupply.automation.dsl.domain.CartState;
 import com.lineasupply.automation.dsl.domain.DeliveryOption;
@@ -28,6 +29,10 @@ import java.util.Map;
 
 @Log
 public final class LineasupplyDriver implements LineasupplyProtocol {
+
+    static {
+        DriverRegistry.register("Web", LineasupplyDriver::new);
+    }
 
     private static final String BASE_URL = "http://localhost:3001";
 
