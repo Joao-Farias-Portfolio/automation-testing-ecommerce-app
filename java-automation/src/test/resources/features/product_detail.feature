@@ -11,13 +11,13 @@ Feature: Product Detail Page
     Then the URL should match the product detail pattern
     And the product title should be visible on the detail page
 
-  @detail_content
+  @detail_content @api
   Scenario: Product detail page shows full information
     Given the shopper is on the homepage with products loaded
     When the shopper clicks the first product card
     Then the product detail page should show price, description and image
 
-  @detail_title_match
+  @detail_title_match @api
   Scenario: Product title on detail page matches listing title
     Given the shopper is viewing the first product
     Then the product title should match the one from the listing

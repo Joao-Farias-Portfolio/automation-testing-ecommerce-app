@@ -7,12 +7,12 @@ Feature: Delivery Options
   Background:
     Given the shopper has navigated to a product detail page
 
-  @smoke @delivery_visible
+  @smoke @delivery_visible @api
   Scenario: Delivery options are displayed on the product detail page
     Then the delivery section should be visible
     And the delivery section should contain radio button options
 
-  @delivery_default
+  @delivery_default @api
   Scenario: One delivery option is pre-selected by default
     Then the delivery section should be visible
     And one delivery option should be selected by default
@@ -23,11 +23,11 @@ Feature: Delivery Options
     When the shopper selects a different delivery option
     Then a different delivery option should now be selected
 
-  @delivery_header
+  @delivery_header @api
   Scenario: Delivery section has a descriptive header
     Then the delivery section should have a header with delivery options text
 
-  @delivery_no_minimum
+  @delivery_no_minimum @api
   Scenario: No minimum order restrictions are shown
     Then no minimum order restrictions should be shown
 
