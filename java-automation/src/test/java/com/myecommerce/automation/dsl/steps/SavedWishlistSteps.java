@@ -12,60 +12,60 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class SavedWishlistSteps {
 
-    private final SavedProtocol protocol = DriverFactory.createSaved();
+    private final SavedProtocol saved = DriverFactory.createSaved();
     private boolean initialSaveState;
 
     @Given("the shopper is on the homepage with save buttons visible")
     public void shopperOnHomepageWithSaveButtonsVisible() {
-        protocol.browseCatalogue();
+        saved.browseCatalogue();
         log.fine("navigated to homepage and waited for save buttons");
     }
 
     @Given("the shopper records the initial save state of the first product")
     public void shopperRecordsInitialSaveState() {
-        initialSaveState = protocol.getSavedState().saveButtonPressed();
+        initialSaveState = saved.getSavedState().saveButtonPressed();
         log.fine("recorded initial save state: pressed=" + initialSaveState);
     }
 
     @Given("the shopper has saved the first product")
     public void shopperHasSavedFirstProduct() {
-        protocol.ensureFirstProductIsSaved();
+        saved.ensureFirstProductIsSaved();
         log.fine("first product is saved");
     }
 
     @Given("the shopper is on the saved page")
     public void shopperIsOnSavedPage() {
-        protocol.viewSavedItems();
+        saved.viewSavedItems();
         log.fine("navigated to saved page");
     }
 
     @When("the shopper toggles the save button for the first product")
     public void shopperTogglesSaveButtonForFirstProduct() {
-        protocol.toggleSaveStateOfFirstProduct();
+        saved.toggleSaveStateOfFirstProduct();
         log.fine("toggled first save button");
     }
 
     @When("the shopper toggles the save button again")
     public void shopperTogglesSaveButtonAgain() {
-        protocol.toggleSaveStateOfFirstProduct();
+        saved.toggleSaveStateOfFirstProduct();
         log.fine("toggled first save button");
     }
 
     @When("the shopper navigates to the saved page")
     public void shopperNavigatesToSavedPage() {
-        protocol.viewSavedItems();
+        saved.viewSavedItems();
         log.fine("navigated to saved page");
     }
 
     @When("the shopper clicks the wishlist link")
     public void shopperClicksWishlistLink() {
-        protocol.viewWishlist();
+        saved.viewWishlist();
         log.fine("clicked wishlist link");
     }
 
     @Then("the save state of the first product should have changed")
     public void saveStateShouldHaveChanged() {
-        boolean currentState = protocol.getSavedState().saveButtonPressed();
+        boolean currentState = saved.getSavedState().saveButtonPressed();
         assertThat(currentState)
             .as("save state of first product should have changed from initial state (" + initialSaveState + ")")
             .isNotEqualTo(initialSaveState);
@@ -74,7 +74,7 @@ public class SavedWishlistSteps {
 
     @Then("the save state should be restored to the initial state")
     public void saveStateShouldBeRestoredToInitialState() {
-        boolean currentState = protocol.getSavedState().saveButtonPressed();
+        boolean currentState = saved.getSavedState().saveButtonPressed();
         assertThat(currentState)
             .as("save state should be restored to initial state (" + initialSaveState + ")")
             .isEqualTo(initialSaveState);
@@ -83,7 +83,7 @@ public class SavedWishlistSteps {
 
     @Then("the saved count should be visible and show a number")
     public void savedCountShouldBeVisibleAndShowNumber() {
-        int count = protocol.getSavedState().savedPageCount();
+        int count = saved.getSavedState().savedPageCount();
         assertThat(count)
             .as("saved count should be visible and show a number >= 1")
             .isGreaterThanOrEqualTo(1);
@@ -92,7 +92,7 @@ public class SavedWishlistSteps {
 
     @Then("the wishlist link should be visible")
     public void wishlistLinkShouldBeVisible() {
-        assertThat(protocol.getSavedState().wishlistLinkVisible())
+        assertThat(saved.getSavedState().wishlistLinkVisible())
             .as("wishlist link should be visible on the saved page")
             .isTrue();
         log.fine("wishlist link is visible");
@@ -100,7 +100,7 @@ public class SavedWishlistSteps {
 
     @Then("the URL should contain \\/saved")
     public void urlShouldContainSaved() {
-        assertThat(protocol.currentUrl())
+        assertThat(saved.currentUrl())
             .as("URL should contain '/saved'")
             .contains("/saved");
         log.fine("URL contains /saved");
@@ -108,7 +108,7 @@ public class SavedWishlistSteps {
 
     @Then("the save button should be visible and functional on the detail page")
     public void saveButtonShouldBeVisibleAndFunctional() {
-        var state = protocol.getSavedState();
+        var state = saved.getSavedState();
         assertThat(state.saveButtonPresent())
             .as("save button should be present and displayed")
             .isTrue();

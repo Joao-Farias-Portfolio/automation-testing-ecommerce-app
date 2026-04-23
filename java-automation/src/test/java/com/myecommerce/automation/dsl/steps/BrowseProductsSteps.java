@@ -12,29 +12,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class BrowseProductsSteps {
 
-    private final CatalogueProtocol protocol = DriverFactory.createCatalogue();
+    private final CatalogueProtocol catalogue = DriverFactory.createCatalogue();
 
     @Given("the shopper is on the homepage")
     public void shopperIsOnHomepage() {
-        protocol.browseCatalogue();
+        catalogue.browseCatalogue();
         log.fine("opened home page");
     }
 
     @Given("the homepage has loaded with products")
     public void homepageHasLoadedWithProducts() {
-        protocol.browseCatalogue();
+        catalogue.browseCatalogue();
         log.fine("home page loaded with products");
     }
 
     @Given("the shopper is on the homepage with products loaded")
     public void shopperOnHomepageWithProductsLoaded() {
-        protocol.browseCatalogue();
+        catalogue.browseCatalogue();
         log.fine("home page loaded with products");
     }
 
     @Then("product cards should be visible")
     public void productCardsShouldBeVisible() {
-        assertThat(protocol.getProductListing().cards())
+        assertThat(catalogue.getProductListing().cards())
             .as("product cards should be visible on the page")
             .isNotEmpty();
         log.fine("product cards are visible");
@@ -42,7 +42,7 @@ public class BrowseProductsSteps {
 
     @Then("each product card should show a title and price")
     public void eachProductCardShouldShowTitleAndPrice() {
-        var cards = protocol.getProductListing().cards();
+        var cards = catalogue.getProductListing().cards();
         assertThat(cards).isNotEmpty();
         var firstCard = cards.getFirst();
         SoftAssertions soft = new SoftAssertions();
@@ -58,7 +58,7 @@ public class BrowseProductsSteps {
 
     @Then("the page should show a loading indicator briefly")
     public void pageShouldShowLoadingIndicatorBriefly() {
-        var listing = protocol.getProductListing();
+        var listing = catalogue.getProductListing();
         assertThat(listing.cards())
             .as("product cards should be visible after loading completes")
             .isNotEmpty();
@@ -70,7 +70,7 @@ public class BrowseProductsSteps {
 
     @Then("product images should have valid sources")
     public void productImagesShouldHaveValidSources() {
-        var cards = protocol.getProductListing().cards();
+        var cards = catalogue.getProductListing().cards();
         SoftAssertions soft = new SoftAssertions();
         cards.forEach(card ->
             soft.assertThat(card.imageUrl())
