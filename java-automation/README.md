@@ -4,6 +4,16 @@ Serenity BDD + Cucumber acceptance tests for the Linea Supply e-commerce app. Th
 
 ---
 
+## CI / CD
+
+The Java acceptance tests run as part of the repository CI pipeline:
+
+- **CI pipeline definition:** [`/.github/workflows/ci.yml`](https://github.com/Joao-Farias-Portfolio/automation-testing-ecommerce-app/blob/main/.github/workflows/ci.yml)
+- **CI run history:** [GitHub Actions](https://github.com/Joao-Farias-Portfolio/automation-testing-ecommerce-app/actions)
+- **Performance tests:** [`/performance/`](https://github.com/Joao-Farias-Portfolio/automation-testing-ecommerce-app/tree/main/performance)
+
+---
+
 ## How to run
 
 Prerequisites: Java 21+, Gradle wrapper (`./gradlew`), Chrome installed. For the API channel, the FastAPI backend must be on port 8001 (`just dev-headless` from the repo root).

@@ -404,7 +404,7 @@ jobs:
           cd backend && uv sync --locked
           uv run --project backend uvicorn app.main:app --host 0.0.0.0 --port 8001 &
           sleep 5
-          cd backend && uv run python -m app.seed
+          uv run --project backend python -m app.seed
 
       - name: Run Gatling simulation
         run: cd java-automation && ./gradlew gatlingRun
