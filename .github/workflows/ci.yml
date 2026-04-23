@@ -25,6 +25,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -95,6 +96,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -124,6 +126,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -190,6 +193,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -252,6 +256,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -290,6 +295,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -346,6 +352,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
@@ -396,6 +403,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
 
       - run: uv python install
 
