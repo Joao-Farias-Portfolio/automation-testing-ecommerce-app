@@ -185,6 +185,16 @@ migrate-history:
 
 # ─── java-automation ──────────────────────────────────────────────────────────
 
+# Run all Serenity BDD acceptance tests via browser (Web channel, 27 scenarios)
+acceptance-web:
+    cd java-automation && ./gradlew test -Dchannel=Web
+    @echo "Report: java-automation/target/site/serenity/index.html"
+
+# Run @api acceptance scenarios directly against the backend via HTTP (API channel, 8 scenarios)
+acceptance-api:
+    cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api"
+    @echo "Report: java-automation/target/site/serenity/index.html"
+
 # Generate Gradle wrapper (requires Gradle installed: brew install gradle)
 install-java:
     @which gradle > /dev/null || (echo "Install Gradle first: brew install gradle" && exit 1)
