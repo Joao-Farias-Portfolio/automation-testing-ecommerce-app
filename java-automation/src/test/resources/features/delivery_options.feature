@@ -12,19 +12,19 @@ Feature: Delivery Options
     Then the delivery section should be visible
     And the delivery section should contain radio button options
 
-  @delivery_default @api @wip
+  @delivery_default @api
   Scenario: One delivery option is pre-selected by default
     Then the delivery section should be visible
     And one delivery option should be selected by default
 
-  @delivery_select @wip
+  @delivery_select
   Scenario: Shopper can select a different delivery option
     Then the delivery section should contain radio button options
     When the shopper notes the currently selected delivery option
     And the shopper selects a different delivery option
     Then a different delivery option should now be selected
 
-  @delivery_header @api @wip
+  @delivery_header @api
   Scenario: Delivery section has a descriptive header
     Then the delivery section should have a header with delivery options text
 
