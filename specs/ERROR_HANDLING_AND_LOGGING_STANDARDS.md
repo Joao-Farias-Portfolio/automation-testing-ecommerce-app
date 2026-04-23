@@ -36,6 +36,7 @@ All services MUST emit structured JSON logs with these required fields:
 - `ERROR` - Error events that might still allow the application to continue
 - `FATAL` - Severe errors that cause service termination
 
+
 ### 1.2 Request Correlation
 - MUST generate `trace_id` (hex string, 32 characters) for every HTTP request
 - MUST generate `span_id` (hex string, 16 characters) for each operation within a request
