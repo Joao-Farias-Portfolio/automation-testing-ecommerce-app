@@ -1,8 +1,6 @@
 package com.myecommerce.automation.driver.web;
 
-import com.myecommerce.automation.dsl.protocols.Channel;
-import com.myecommerce.automation.dsl.protocols.DriverRegistry;
-import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
+import com.myecommerce.automation.driver.ports.BrowserPort;
 import com.myecommerce.automation.dsl.domain.CartItem;
 import com.myecommerce.automation.dsl.domain.CartState;
 import com.myecommerce.automation.dsl.domain.DeliveryOption;
@@ -12,86 +10,74 @@ import com.myecommerce.automation.dsl.domain.ProductDetail;
 import com.myecommerce.automation.dsl.domain.ProductListing;
 import com.myecommerce.automation.dsl.domain.SavedState;
 import com.myecommerce.automation.dsl.domain.SearchResults;
+import com.myecommerce.automation.dsl.protocols.Channel;
+import com.myecommerce.automation.dsl.protocols.DriverRegistry;
+import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import lombok.extern.java.Log;
 import net.serenitybdd.annotations.Step;
-import net.serenitybdd.screenplay.abilities.BrowseTheWeb;
-import net.serenitybdd.screenplay.actions.Open;
-import net.serenitybdd.screenplay.actors.OnStage;
-import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.time.Duration;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import java.util.stream.IntStream;
 
 @Log
 public final class MyEcommerceDriver implements MyEcommerceProtocol {
 
     static {
-        DriverRegistry.register(Channel.WEB, MyEcommerceDriver::new);
+        DriverRegistry.register(Channel.WEB, () -> new MyEcommerceDriver(new SeleniumBrowserPort()));
     }
 
     private static final String BASE_URL = "http://localhost:3001";
 
-    private WebDriver driver() {
-        return BrowseTheWeb.as(OnStage.theActorCalled("Shopper")).getDriver();
-    }
+    private final BrowserPort browser;
 
-    private void navigateTo(String url) {
-        OnStage.theActorCalled("Shopper").attemptsTo(Open.url(url));
+    MyEcommerceDriver(BrowserPort browser) {
+        this.browser = browser;
     }
 
     @Step("Browse product catalogue")
     @Override
     public void browseCatalogue() {
         log.info("browseCatalogue: navigating to " + BASE_URL);
-        navigateTo(BASE_URL);
+        browser.navigateTo(BASE_URL);
     }
 
     @Step("View cart")
     @Override
     public void viewCart() {
         log.info("viewCart: navigating to cart");
-        navigateTo(BASE_URL + "/cart");
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.or(
-                ExpectedConditions.numberOfElementsToBeMoreThan(By.cssSelector("[data-testid='cart-item']"), 0),
-                ExpectedConditions.visibilityOfElementLocated(By.cssSelector("[data-testid='empty-cart']"))));
+        browser.navigateTo(BASE_URL + "/cart");
+        browser.waitUntilAnyPresent("[data-testid='cart-item']", "[data-testid='empty-cart']");
     }
 
     @Step("View saved items")
     @Override
     public void viewSavedItems() {
         log.info("viewSavedItems: navigating to saved page");
-        navigateTo(BASE_URL + "/saved");
-        waitUntilUrlContains("/saved");
+        browser.navigateTo(BASE_URL + "/saved");
+        browser.waitUntilUrlContains("/saved");
     }
 
     @Step("Return to product listing")
     @Override
     public void returnToProductListing() {
         log.info("returnToProductListing: navigating browser back");
-        driver().navigate().back();
+        browser.navigateBack();
     }
 
     @Step("Add product to cart")
     @Override
     public void addProductToCart() {
         log.info("addProductToCart: finding first enabled add-to-cart button");
-        waitUntilMoreThan(0, "[data-testid='add-to-cart']");
+        browser.waitUntilCountMoreThan("[data-testid='add-to-cart']", 0);
         var countBefore = readCartCount();
-        var buttons = driver().findElements(By.cssSelector("[data-testid='add-to-cart']"));
-        var firstEnabled = buttons.stream()
-            .filter(WebElement::isEnabled)
+        int buttonCount = browser.count("[data-testid='add-to-cart']");
+        int enabledIndex = IntStream.range(0, buttonCount)
+            .filter(i -> browser.isNthEnabled("[data-testid='add-to-cart']", i))
             .findFirst()
-            .orElseThrow(() -> new IllegalStateException("No enabled add-to-cart button found"));
-        firstEnabled.click();
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(_ -> readCartCount() > countBefore);
+            .orElse(0);
+        browser.clickNth("[data-testid='add-to-cart']", enabledIndex);
+        browser.waitUntilCondition(() -> readCartCount() > countBefore, 10);
         log.fine("addProductToCart: cart count increased from " + countBefore);
     }
 
@@ -99,11 +85,11 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public void removeFirstItemFromCart() {
         log.info("removeFirstItemFromCart: removing first cart item");
-        waitUntilMoreThan(0, "[data-testid='remove-item']");
+        browser.waitUntilCountMoreThan("[data-testid='remove-item']", 0);
         var countBefore = readCartCount();
-        driver().findElements(By.cssSelector("[data-testid='remove-item']")).getFirst().click();
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(_ -> readCartCount() < countBefore || isCartEmptyStateVisible());
+        browser.clickNth("[data-testid='remove-item']", 0);
+        browser.waitUntilCondition(
+            () -> readCartCount() < countBefore || browser.isPresent("[data-testid='empty-cart']"), 10);
         log.fine("removeFirstItemFromCart: item removed");
     }
 
@@ -111,12 +97,10 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public void changeQuantityTo(int quantity) {
         log.info("changeQuantityTo: setting quantity to " + quantity);
-        waitUntilPresent("[data-testid='quantity-display']");
+        browser.waitUntilPresent("[data-testid='quantity-display']");
         var totalBefore = readCartTotal();
-        var input = driver().findElement(By.cssSelector("[data-testid='quantity-display']"));
-        setReactInputValue(input, String.valueOf(quantity));
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(_ -> !readCartTotal().equals(totalBefore));
+        browser.setReactInputValue("[data-testid='quantity-display']", String.valueOf(quantity));
+        browser.waitUntilCondition(() -> !readCartTotal().equals(totalBefore), 10);
         log.fine("changeQuantityTo: total updated from '" + totalBefore + "'");
     }
 
@@ -124,48 +108,40 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public void searchFor(String term) {
         log.info("searchFor: searching for '" + term + "'");
-        var searchInput = driver().findElement(By.cssSelector("input[placeholder*='Search Items']"));
-        searchInput.clear();
-        searchInput.sendKeys(term);
-        searchInput.sendKeys(Keys.ENTER);
-        waitUntilUrlContains("/search/");
+        browser.sendKeys("input[placeholder*='Search Items']", term, true);
+        browser.waitUntilUrlContains("/search/");
     }
 
     @Step("View first product")
     @Override
     public void viewFirstProduct() {
         log.info("viewFirstProduct: clicking first product card");
-        waitUntilVisible("[data-testid='product-card']");
-        driver().findElements(By.cssSelector("[data-testid='product-card']")).getFirst().click();
-        waitUntilUrlMatches(".*/products/\\d+");
+        browser.waitUntilVisible("[data-testid='product-card']");
+        browser.clickNth("[data-testid='product-card']", 0);
+        browser.waitUntilUrlMatches(".*/products/\\d+");
     }
 
     @Step("Choose alternative delivery option")
     @Override
     public void chooseAlternativeDeliveryOption() {
         log.info("chooseAlternativeDeliveryOption: selecting a non-currently-selected delivery option");
-        var section = deliverySection();
-        if (section.isEmpty()) {
-            log.warning("chooseAlternativeDeliveryOption: no delivery section found");
-            return;
+        int radioCount = browser.count("input[type='radio']");
+        for (int i = 0; i < radioCount; i++) {
+            if (!browser.isNthSelected("input[type='radio']", i)) {
+                browser.clickXpath("(//input[@type='radio'])[" + (i + 1) + "]/../../..");
+                log.fine("chooseAlternativeDeliveryOption: clicked option at index " + i);
+                return;
+            }
         }
-        var radios = section.getFirst().findElements(By.cssSelector("input[type='radio']"));
-        var unselected = radios.stream()
-            .filter(radio -> !radio.isSelected())
-            .findFirst();
-        unselected.ifPresentOrElse(
-            radio -> {
-                radio.findElement(By.xpath("../..")).click();
-                log.fine("chooseAlternativeDeliveryOption: clicked unselected delivery option");
-            },
-            () -> log.warning("chooseAlternativeDeliveryOption: all options are already selected"));
+        log.warning("chooseAlternativeDeliveryOption: all options already selected");
     }
 
     @Step("Ensure first product is saved")
     @Override
     public void ensureFirstProductIsSaved() {
-        waitUntilVisible("[data-testid='save-button']");
-        if (!isAriaPressed(driver().findElements(By.cssSelector("[data-testid='save-button']")).getFirst())) {
+        browser.waitUntilVisible("[data-testid='save-button']");
+        boolean pressed = Boolean.parseBoolean(browser.attribute("[data-testid='save-button']", "aria-pressed"));
+        if (!pressed) {
             toggleSaveStateOfFirstProduct();
         }
     }
@@ -174,26 +150,25 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public void toggleSaveStateOfFirstProduct() {
         log.info("toggleSaveStateOfFirstProduct: toggling first save button");
-        var button = driver().findElements(By.cssSelector("[data-testid='save-button']")).getFirst();
-        var previousState = button.getAttribute("aria-pressed");
-        button.click();
-        waitForAriaPressed(button, previousState);
+        var previousState = browser.attribute("[data-testid='save-button']", "aria-pressed");
+        browser.clickNth("[data-testid='save-button']", 0);
+        browser.waitUntilAttributeChanges("[data-testid='save-button']", 0, "aria-pressed", previousState);
     }
 
     @Step("View wishlist")
     @Override
     public void viewWishlist() {
         log.info("viewWishlist: clicking wishlist link");
-        driver().findElement(By.cssSelector("[data-testid='wishlist-link']")).click();
-        waitUntilUrlContains("/saved");
+        browser.click("[data-testid='wishlist-link']");
+        browser.waitUntilUrlContains("/saved");
     }
 
     @Override
     public ProductListing getProductListing() {
         log.info("getProductListing: waiting for product cards");
-        waitUntilVisible("[data-testid='product-card']");
-        var cards = extractProductCardsViaJavascript();
-        boolean loadingVisible = hasVisibleLoadingElements();
+        browser.waitUntilVisible("[data-testid='product-card']");
+        var cards = extractProductCards();
+        boolean loadingVisible = browser.isPresent("[data-testid='loading']") && browser.isVisible("[data-testid='loading']");
         log.info("getProductListing: found " + cards.size() + " cards, loadingVisible=" + loadingVisible);
         return new ProductListing(cards, loadingVisible);
     }
@@ -204,7 +179,7 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         var count = readCartCount();
         var total = readCartTotal();
         var items = readCartItems();
-        boolean empty = isCartEmptyStateVisible();
+        boolean empty = browser.isPresent("[data-testid='empty-cart']");
         log.info("getCartState: count=" + count + ", total=" + total + ", items=" + items.size() + ", empty=" + empty);
         return new CartState(count, total, items, empty);
     }
@@ -212,30 +187,23 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     @Override
     public ProductDetail getProductDetail() {
         log.info("getProductDetail: reading product detail page");
-        waitUntilVisible("[data-testid='product-title']");
-        var title = textOf("[data-testid='product-title']");
-        var price = textOf("[data-testid='product-price']");
-        var description = textOf("[data-testid='product-description']");
-        boolean imagePresent = isProductImagePresent();
-        var addToCartButton = findAddToCartButton();
+        browser.waitUntilVisible("[data-testid='product-title']");
+        var title = browser.text("[data-testid='product-title']");
+        var price = browser.text("[data-testid='product-price']");
+        var description = browser.text("[data-testid='product-description']");
+        boolean imagePresent = browser.isPresent("[data-testid='product-detail-image']");
+        var buttonText = browser.text("[data-testid='add-to-cart']");
+        boolean buttonEnabled = browser.isEnabled("[data-testid='add-to-cart']");
         log.info("getProductDetail: title='%s', imagePresent=%b, buttonEnabled=%b"
-            .formatted(title, imagePresent, addToCartButton.isEnabled()));
+            .formatted(title, imagePresent, buttonEnabled));
         return ProductDetail.builder()
             .title(title)
             .price(price)
             .description(description)
             .imagePresent(imagePresent)
-            .addToCartButtonText(addToCartButton.getText())
-            .addToCartEnabled(addToCartButton.isEnabled())
+            .addToCartButtonText(buttonText)
+            .addToCartEnabled(buttonEnabled)
             .build();
-    }
-
-    private boolean isProductImagePresent() {
-        return !driver().findElements(By.cssSelector("[data-testid='product-detail-image']")).isEmpty();
-    }
-
-    private WebElement findAddToCartButton() {
-        return driver().findElement(By.cssSelector("[data-testid='add-to-cart']"));
     }
 
     @Override
@@ -244,39 +212,73 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         var section = findVisibleDeliverySection();
         if (section.isEmpty()) {
             log.info("getDeliveryState: delivery section not visible");
-            return absentDeliveryState();
+            return DeliveryState.builder()
+                .sectionVisible(false)
+                .options(List.of())
+                .headerText("")
+                .minimumOrderTextPresent(false)
+                .build();
         }
         return presentDeliveryState(section.get());
     }
 
-    private java.util.Optional<WebElement> findVisibleDeliverySection() {
-        waitUntilVisible("[data-testid='product-title']");
-        try {
-            new WebDriverWait(driver(), Duration.ofSeconds(5))
-                .until(_ -> !deliverySection().isEmpty());
-        } catch (org.openqa.selenium.TimeoutException _) {
-            return java.util.Optional.empty();
-        }
-        var sections = deliverySection();
-        if (sections.isEmpty() || !sections.getFirst().isDisplayed()) {
-            return java.util.Optional.empty();
-        }
-        return java.util.Optional.of(sections.getFirst());
+    @Override
+    public SearchResults getSearchResults() {
+        log.info("getSearchResults: reading search results");
+        browser.waitUntilUrlContains("/search/");
+        var cards = extractProductCards();
+        boolean emptyStateVisible = browser.isPresent("[data-testid='no-results']");
+        log.info("getSearchResults: found " + cards.size() + " cards, emptyStateVisible=" + emptyStateVisible);
+        return new SearchResults(cards, emptyStateVisible);
     }
 
-    private DeliveryState absentDeliveryState() {
-        return DeliveryState.builder()
-            .sectionVisible(false)
-            .options(List.of())
-            .headerText("")
-            .minimumOrderTextPresent(false)
-            .build();
+    @Override
+    public SavedState getSavedState() {
+        log.info("getSavedState: reading saved state");
+        browser.waitUntilAnyPresent(
+            "[data-testid='product-card']",
+            "[data-testid='save-button']",
+            "[data-testid='wishlist-link']");
+        boolean present = browser.isPresent("[data-testid='save-button']");
+        boolean pressed = present && Boolean.parseBoolean(browser.attribute("[data-testid='save-button']", "aria-pressed"));
+        boolean enabled = present && browser.isEnabled("[data-testid='save-button']");
+        int savedCount = readSavedCount();
+        boolean wishlistLinkVisible = browser.isPresent("[data-testid='wishlist-link']");
+        log.info("getSavedState: present=%b, pressed=%b, enabled=%b, count=%d"
+            .formatted(present, pressed, enabled, savedCount));
+        return new SavedState(present, pressed, enabled, savedCount, wishlistLinkVisible);
     }
 
-    private DeliveryState presentDeliveryState(WebElement section) {
-        var options = readDeliveryOptions(section);
-        var header = readDeliveryHeader();
-        boolean minimumOrderPresent = minimumOrderTextPresent();
+    @Override
+    public String currentUrl() {
+        var url = browser.currentUrl();
+        log.fine("currentUrl: " + url);
+        return url;
+    }
+
+    // ── private helpers ───────────────────────────────────────────────────────
+
+    private Optional<String> findVisibleDeliverySection() {
+        browser.waitUntilVisible("[data-testid='product-title']");
+        boolean found = ((SeleniumBrowserPort) browser).tryWaitUntilPresent(DELIVERY_SELECTOR, 5);
+        if (!found || !browser.isVisible(DELIVERY_SELECTOR)) {
+            return Optional.empty();
+        }
+        return Optional.of(DELIVERY_SELECTOR);
+    }
+
+    private DeliveryState presentDeliveryState(String sectionCss) {
+        int radioCount = browser.count("input[type='radio']");
+        var options = IntStream.range(0, radioCount)
+            .mapToObj(i -> {
+                String id = browser.nthAttribute("input[type='radio']", i, "value");
+                boolean selected = browser.isNthSelected("input[type='radio']", i);
+                return new DeliveryOption(id.isBlank() ? String.valueOf(i) : id, selected);
+            })
+            .toList();
+        var header = browser.nthText(sectionCss + " p", 0);
+        boolean minimumOrderPresent = browser.isPresent(
+            "[data-testid='minimum-order'], [data-testid='min-order']");
         log.info("getDeliveryState: visible=true, options=%d, header='%s'".formatted(options.size(), header));
         return DeliveryState.builder()
             .sectionVisible(true)
@@ -286,209 +288,42 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
             .build();
     }
 
-    @Override
-    public SearchResults getSearchResults() {
-        log.info("getSearchResults: reading search results");
-        waitUntilUrlContains("/search/");
-        var cards = extractProductCardsViaJavascript();
-        boolean emptyStateVisible = !driver().findElements(By.cssSelector("[data-testid='no-results']")).isEmpty();
-        log.info("getSearchResults: found " + cards.size() + " cards, emptyStateVisible=" + emptyStateVisible);
-        return new SearchResults(cards, emptyStateVisible);
-    }
-
-    @Override
-    public SavedState getSavedState() {
-        log.info("getSavedState: reading saved state");
-        waitForSavedPageReady();
-        var saveButtons = driver().findElements(By.cssSelector("[data-testid='save-button']"));
-        return buildSavedState(saveButtons);
-    }
-
-    private void waitForSavedPageReady() {
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.or(
-                ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='product-card']")),
-                ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='save-button']")),
-                ExpectedConditions.presenceOfElementLocated(By.cssSelector("[data-testid='wishlist-link']"))));
-    }
-
-    private SavedState buildSavedState(List<WebElement> saveButtons) {
-        boolean present = !saveButtons.isEmpty();
-        boolean pressed = present && isAriaPressed(saveButtons.getFirst());
-        boolean enabled = present && saveButtons.getFirst().isEnabled();
-        int savedCount = readSavedCount();
-        boolean wishlistLinkVisible = isWishlistLinkVisible();
-        log.info("getSavedState: present=%b, pressed=%b, enabled=%b, count=%d"
-            .formatted(present, pressed, enabled, savedCount));
-        return new SavedState(present, pressed, enabled, savedCount, wishlistLinkVisible);
-    }
-
-    private boolean isWishlistLinkVisible() {
-        return !driver().findElements(By.cssSelector("[data-testid='wishlist-link']")).isEmpty();
-    }
-
-    private boolean isAriaPressed(WebElement el) {
-        return Boolean.parseBoolean(el.getAttribute("aria-pressed"));
-    }
-
-    @Override
-    public String currentUrl() {
-        var url = driver().getCurrentUrl();
-        log.fine("currentUrl: " + url);
-        return url;
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<ProductCard> extractProductCardsViaJavascript() {
-        var rawData = (List<Map<String, String>>) ((org.openqa.selenium.JavascriptExecutor) driver())
-            .executeScript("""
+    private List<ProductCard> extractProductCards() {
+        return browser.extractAllViaScript("""
                 return Array.from(document.querySelectorAll('[data-testid="product-card"]'))
                     .map(card => ({
                         title: (card.querySelector('[data-testid="product-title"]')?.textContent ?? '').trim(),
                         price: (card.querySelector('[data-testid="product-price"]')?.textContent ?? '').trim(),
                         imageUrl: card.querySelector('img')?.src ?? ''
                     }));
-                """);
-        return rawData.stream()
+                """)
+            .stream()
             .map(m -> new ProductCard(m.get("title"), m.get("price"), m.get("imageUrl")))
             .toList();
     }
 
-    private boolean hasVisibleLoadingElements() {
-        return driver().findElements(By.cssSelector("[data-testid='loading']"))
-            .stream()
-            .anyMatch(this::safeIsDisplayed);
-    }
-
     private int readCartCount() {
-        var badges = driver().findElements(By.cssSelector("[data-testid='cart-count']"));
-        if (badges.isEmpty()) return 0;
-        String text = badges.getFirst().getText().trim();
+        String text = browser.text("[data-testid='cart-count']");
         return text.isEmpty() ? 0 : Integer.parseInt(text);
     }
 
     private String readCartTotal() {
-        var totals = driver().findElements(By.cssSelector("[data-testid='cart-total']"));
-        return totals.isEmpty() ? "" : totals.getFirst().getText().trim();
+        return browser.text("[data-testid='cart-total']");
     }
 
     private List<CartItem> readCartItems() {
-        return driver().findElements(By.cssSelector("[data-testid='cart-item']"))
-            .stream()
-            .map(el -> new CartItem(el.getText().trim()))
+        int count = browser.count("[data-testid='cart-item']");
+        return IntStream.range(0, count)
+            .mapToObj(i -> new CartItem(browser.nthText("[data-testid='cart-item']", i)))
             .toList();
     }
 
-    private boolean isCartEmptyStateVisible() {
-        return !driver().findElements(By.cssSelector("[data-testid='empty-cart']")).isEmpty();
+    private int readSavedCount() {
+        String number = browser.text("[data-testid='saved-count']").replaceAll("[^0-9]", "").trim();
+        return number.isEmpty() ? 0 : Integer.parseInt(number);
     }
 
     private static final String DELIVERY_SELECTOR =
         "[data-testid='delivery-section'], [data-testid='delivery-options'], " +
         "[data-testid='shipping-section'], [data-testid='shipping-options']";
-
-    private List<WebElement> deliverySection() {
-        return driver().findElements(By.cssSelector(DELIVERY_SELECTOR));
-    }
-
-    private List<DeliveryOption> readDeliveryOptions(WebElement section) {
-        return section.findElements(By.cssSelector("input[type='radio']"))
-            .stream()
-            .map(radio -> new DeliveryOption(radioOptionId(radio), radio.isSelected()))
-            .toList();
-    }
-
-    private String radioOptionId(WebElement radio) {
-        String val = radio.getAttribute("value");
-        return val != null ? val : "";
-    }
-
-    private String readDeliveryHeader() {
-        var headers = driver().findElements(
-            By.xpath("//*[contains(translate(text(), 'DELIVERYOPTIONS', 'deliveryoptions'), 'delivery options')]"));
-        return headers.isEmpty() ? "" : headers.getFirst().getText().trim();
-    }
-
-    private boolean minimumOrderTextPresent() {
-        return !driver().findElements(
-            By.xpath("//*[contains(text(), 'Minimum order') or contains(text(), 'Min order')]")).isEmpty();
-    }
-
-    private int readSavedCount() {
-        var counts = driver().findElements(By.cssSelector("[data-testid='saved-count']"));
-        if (counts.isEmpty()) return 0;
-        String number = counts.getFirst().getText().replaceAll("[^0-9]", "").trim();
-        return number.isEmpty() ? 0 : Integer.parseInt(number);
-    }
-
-    private void waitForAriaPressed(WebElement button, String previousValue) {
-        new WebDriverWait(driver(), Duration.ofSeconds(5))
-            .until(_ -> !previousValue.equals(button.getAttribute("aria-pressed")));
-    }
-
-    private void waitUntilVisible(String css) {
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(css)));
-    }
-
-    private void waitUntilPresent(String css) {
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(css)));
-    }
-
-    private void waitUntilMoreThan(int count, String css) {
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.numberOfElementsToBeMoreThan(By.cssSelector(css), count));
-    }
-
-    private void waitUntilUrlContains(String fragment) {
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.urlContains(fragment));
-    }
-
-    private void waitUntilUrlMatches(String regex) {
-        new WebDriverWait(driver(), Duration.ofSeconds(10))
-            .until(ExpectedConditions.urlMatches(regex));
-    }
-
-    private String textOf(String css) {
-        var elements = driver().findElements(By.cssSelector(css));
-        return elements.isEmpty() ? "" : elements.getFirst().getText().trim();
-    }
-
-    private String textOf(WebElement parent, String css) {
-        return parent.findElements(By.cssSelector(css))
-            .stream()
-            .findFirst()
-            .map(WebElement::getText)
-            .map(String::trim)
-            .orElse("");
-    }
-
-    private String attrOf(WebElement parent, String css, String attribute) {
-        return parent.findElements(By.cssSelector(css))
-            .stream()
-            .findFirst()
-            .map(el -> el.getAttribute(attribute))
-            .orElse("");
-    }
-
-    private void setReactInputValue(WebElement input, String value) {
-        var js = (org.openqa.selenium.JavascriptExecutor) driver();
-        js.executeScript("""
-            var setter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value').set;
-            setter.call(arguments[0], arguments[1]);
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-            """, input, value);
-    }
-
-    private boolean safeIsDisplayed(WebElement el) {
-        try {
-            return el.isDisplayed();
-        } catch (Exception _) {
-            return false;
-        }
-    }
 }
