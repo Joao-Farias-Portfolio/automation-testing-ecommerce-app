@@ -4,7 +4,12 @@
       "request": { "method": "GET", "url": "/api/categories" },
       "response": {
         "status": 200,
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "http://localhost:3001",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "*"
+        },
         "jsonBody": [
           { "id": 1, "name": "Electronics", "created_at": "2024-01-01T00:00:00", "updated_at": "2024-01-01T00:00:00" },
           { "id": 2, "name": "Furniture",   "created_at": "2024-01-01T00:00:00", "updated_at": "2024-01-01T00:00:00" },

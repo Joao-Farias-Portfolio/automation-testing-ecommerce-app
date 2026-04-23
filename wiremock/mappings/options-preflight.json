@@ -1,0 +1,19 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "OPTIONS",
+        "urlPathPattern": ".*"
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Origin": "http://localhost:3001",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "*",
+          "Access-Control-Max-Age": "86400"
+        }
+      }
+    }
+  ]
+}
