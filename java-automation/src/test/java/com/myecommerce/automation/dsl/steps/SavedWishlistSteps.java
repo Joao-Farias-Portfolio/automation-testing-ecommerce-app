@@ -17,8 +17,7 @@ public class SavedWishlistSteps {
 
     @Given("the shopper is on the homepage with save buttons visible")
     public void shopperOnHomepageWithSaveButtonsVisible() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
+        protocol.browseCatalogue();
         log.fine("navigated to homepage and waited for save buttons");
     }
 
@@ -30,43 +29,37 @@ public class SavedWishlistSteps {
 
     @Given("the shopper has saved the first product")
     public void shopperHasSavedFirstProduct() {
-        if (!protocol.getSavedState().saveButtonPressed()) {
-            protocol.toggleFirstSaveButton();
-            log.fine("toggled save button to saved state");
-        } else {
-            log.fine("first product already saved; no toggle needed");
-        }
+        protocol.ensureFirstProductIsSaved();
+        log.fine("first product is saved");
     }
 
     @Given("the shopper is on the saved page")
     public void shopperIsOnSavedPage() {
-        protocol.openSavedPage();
-        protocol.waitForSavedPageToLoad();
+        protocol.viewSavedItems();
         log.fine("navigated to saved page");
     }
 
     @When("the shopper toggles the save button for the first product")
     public void shopperTogglesSaveButtonForFirstProduct() {
-        protocol.toggleFirstSaveButton();
+        protocol.toggleSaveStateOfFirstProduct();
         log.fine("toggled first save button");
     }
 
     @When("the shopper toggles the save button again")
     public void shopperTogglesSaveButtonAgain() {
-        protocol.toggleFirstSaveButton();
+        protocol.toggleSaveStateOfFirstProduct();
         log.fine("toggled first save button");
     }
 
     @When("the shopper navigates to the saved page")
     public void shopperNavigatesToSavedPage() {
-        protocol.openSavedPage();
-        protocol.waitForSavedPageToLoad();
+        protocol.viewSavedItems();
         log.fine("navigated to saved page");
     }
 
     @When("the shopper clicks the wishlist link")
     public void shopperClicksWishlistLink() {
-        protocol.clickWishlistLink();
+        protocol.viewWishlist();
         log.fine("clicked wishlist link");
     }
 

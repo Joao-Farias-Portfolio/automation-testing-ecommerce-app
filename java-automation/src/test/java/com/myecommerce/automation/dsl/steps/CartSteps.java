@@ -19,8 +19,7 @@ public class CartSteps {
 
     @Given("the shopper is on the homepage with products loaded")
     public void shopperOnHomepageWithProductsLoaded() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
+        protocol.browseCatalogue();
         log.fine("home page loaded with products");
     }
 
@@ -38,14 +37,13 @@ public class CartSteps {
 
     @When("the shopper navigates to the cart page")
     public void shopperNavigatesToCartPage() {
-        protocol.openCartPage();
+        protocol.viewCart();
         log.fine("navigated to cart page");
     }
 
     @When("the shopper returns to the homepage")
     public void shopperReturnsToHomepage() {
-        protocol.openHomePage();
-        protocol.waitForProductsToLoad();
+        protocol.browseCatalogue();
         log.fine("returned to home page");
     }
 
@@ -69,7 +67,6 @@ public class CartSteps {
 
     @Then("the cart badge should show {int} item(s)")
     public void cartBadgeShouldShow(int expectedCount) {
-        protocol.waitForCartCountToBe(expectedCount);
         assertThat(protocol.getCartState().itemCount())
             .as("cart badge should show " + expectedCount + " item(s)")
             .isEqualTo(expectedCount);
@@ -79,7 +76,6 @@ public class CartSteps {
     @Then("the cart badge should have increased by {int}")
     public void cartBadgeShouldHaveIncreasedBy(int increment) {
         int expected = notedItemCount + increment;
-        protocol.waitForCartCountToBe(expected);
         assertThat(protocol.getCartState().itemCount())
             .as("cart badge should have increased by " + increment)
             .isEqualTo(expected);
@@ -88,7 +84,6 @@ public class CartSteps {
 
     @Then("the cart should contain at least {int} items")
     public void cartShouldContainAtLeastItems(int minimum) {
-        protocol.waitForCartItemsToAppear();
         assertThat(protocol.getCartState().items().size())
             .as("cart should contain at least " + minimum + " items")
             .isGreaterThanOrEqualTo(minimum);
@@ -106,7 +101,6 @@ public class CartSteps {
 
     @Then("the cart total should have changed")
     public void cartTotalShouldHaveChanged() {
-        protocol.waitForCartTotalToChange(notedTotal);
         assertThat(protocol.getCartState().total())
             .as("cart total should have changed from " + notedTotal)
             .isNotEqualTo(notedTotal);
@@ -115,7 +109,6 @@ public class CartSteps {
 
     @Then("the cart should show an empty state")
     public void cartShouldShowEmptyState() {
-        protocol.waitForCartToBeEmpty();
         assertThat(protocol.getCartState().isEmpty())
             .as("cart should show empty state")
             .isTrue();
@@ -124,7 +117,6 @@ public class CartSteps {
 
     @Then("the first cart item should be visible")
     public void firstCartItemShouldBeVisible() {
-        protocol.waitForCartItemsToAppear();
         SoftAssertions soft = new SoftAssertions();
         soft.assertThat(protocol.getCartState().items())
             .as("cart should have at least one item")

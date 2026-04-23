@@ -40,21 +40,21 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     private int currentProductId = -1;
     private String lastSearchTerm = "";
 
-    @Override public void openHomePage() {}
-    @Override public void navigateBack() {}
+    @Override public void browseCatalogue() {}
+    @Override public void returnToProductListing() {}
 
     @Override
-    public void openCartPage() {
+    public void viewCart() {
         throw unsupported("Cart page");
     }
 
     @Override
-    public void openSavedPage() {
+    public void viewSavedItems() {
         throw unsupported("Saved page");
     }
 
     @Override
-    public void clickFirstProductCard() {
+    public void viewFirstProduct() {
         this.currentProductId = fetchProducts("").getFirst().id();
         log.info("selected product id=" + currentProductId);
     }
@@ -64,12 +64,13 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         this.lastSearchTerm = term;
     }
 
-    @Override public void addProductToCart()        { throw unsupported("Cart"); }
-    @Override public void removeFirstItemFromCart() { throw unsupported("Cart"); }
-    @Override public void changeQuantityTo(int qty) { throw unsupported("Cart"); }
-    @Override public void selectAlternativeDeliveryOption() { throw unsupported("Delivery option selection"); }
-    @Override public void toggleFirstSaveButton()   { throw unsupported("Save button"); }
-    @Override public void clickWishlistLink()        { throw unsupported("Wishlist link"); }
+    @Override public void addProductToCart()                   { throw unsupported("Cart"); }
+    @Override public void removeFirstItemFromCart()            { throw unsupported("Cart"); }
+    @Override public void changeQuantityTo(int qty)            { throw unsupported("Cart"); }
+    @Override public void chooseAlternativeDeliveryOption()    { throw unsupported("Delivery option selection"); }
+    @Override public void ensureFirstProductIsSaved()          { throw unsupported("Save button"); }
+    @Override public void toggleSaveStateOfFirstProduct()      { throw unsupported("Save button"); }
+    @Override public void viewWishlist()                       { throw unsupported("Wishlist link"); }
 
     @Override
     public ProductListing getProductListing() {
@@ -134,14 +135,6 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         if (currentProductId >= 0)     return BASE_URL + "/products/" + currentProductId;
         return BASE_URL + "/products";
     }
-
-    @Override public void waitForCartCountToBe(int expected)     {}
-    @Override public void waitForCartTotalToChange(String prev)  {}
-    @Override public void waitForCartToBeEmpty()                 {}
-    @Override public void waitForCartItemsToAppear()             {}
-    @Override public void waitForProductsToLoad()                {}
-    @Override public void waitForSearchResultsToLoad()           {}
-    @Override public void waitForSavedPageToLoad()               {}
 
     private List<ApiDeliveryOption> fetchActiveDeliveryOptions() {
         return fetchProductDetail(currentProductId).deliveryOptions().stream()

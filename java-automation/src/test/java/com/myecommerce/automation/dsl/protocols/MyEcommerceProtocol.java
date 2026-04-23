@@ -9,19 +9,20 @@ import com.myecommerce.automation.dsl.domain.SearchResults;
 
 public interface MyEcommerceProtocol {
 
-    void openHomePage();
-    void openCartPage();
-    void openSavedPage();
-    void navigateBack();
+    void browseCatalogue();
+    void viewCart();
+    void viewSavedItems();
+    void returnToProductListing();
 
     void addProductToCart();
     void removeFirstItemFromCart();
     void changeQuantityTo(int quantity);
     void searchFor(String term);
-    void clickFirstProductCard();
-    void selectAlternativeDeliveryOption();
-    void toggleFirstSaveButton();
-    void clickWishlistLink();
+    void viewFirstProduct();
+    void chooseAlternativeDeliveryOption();
+    void ensureFirstProductIsSaved();
+    void toggleSaveStateOfFirstProduct();
+    void viewWishlist();
 
     ProductListing getProductListing();
     CartState      getCartState();
@@ -30,12 +31,4 @@ public interface MyEcommerceProtocol {
     SearchResults  getSearchResults();
     SavedState     getSavedState();
     String         currentUrl();
-
-    void waitForCartCountToBe(int expected);
-    void waitForCartTotalToChange(String previousTotal);
-    void waitForCartToBeEmpty();
-    void waitForCartItemsToAppear();
-    void waitForProductsToLoad();
-    void waitForSearchResultsToLoad();
-    void waitForSavedPageToLoad();
 }
