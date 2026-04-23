@@ -191,9 +191,32 @@ acceptance-web:
     @echo "Report: java-automation/target/site/serenity/index.html"
 
 # Run @api acceptance scenarios directly against the backend via HTTP (API channel, 8 scenarios)
-acceptance-api:
+acceptance-api: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    # Start backend if not already listening on :8001
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
+        # Wait for backend to be ready
+        for i in $(seq 1 20); do
+            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
+            sleep 0.5
+        done
+        STARTED_BACKEND=true
+    fi
+    # Run the tests
     cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api"
-    @echo "Report: java-automation/target/site/serenity/index.html"
+    EXIT_CODE=$?
+    # Stop backend only if this recipe started it
+    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+        echo "Stopping backend ..."
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: java-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
 
 # Generate Gradle wrapper (requires Gradle installed: brew install gradle)
 install-java:
