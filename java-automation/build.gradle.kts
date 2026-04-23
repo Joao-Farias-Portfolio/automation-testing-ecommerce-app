@@ -32,7 +32,7 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
 }
 
-tasks.withType<JavaCompile>().matching { it.name.startsWith("compileGatling") }.configureEach {
+tasks.withType<JavaCompile>().configureEach {
     sourceCompatibility = "17"
     targetCompatibility = "17"
 }
