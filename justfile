@@ -358,6 +358,49 @@ perf-k6-load:
 perf-gatling:
     cd java-automation && ./gradlew gatlingRun
 
+# ─── wiremock ─────────────────────────────────────────────────────────────────
+
+# Download WireMock standalone JAR (run once)
+download-wiremock:
+    mkdir -p wiremock
+    curl -L -o wiremock/wiremock-standalone.jar \
+        https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/3.13.0/wiremock-standalone-3.13.0.jar
+
+# Run Playwright E2E tests with WireMock stub backend (no real backend needed)
+test-e2e-wiremock:
+    cd frontend && WIREMOCK=true npx playwright test
+
+# Run Java web-channel tests with WireMock stub backend
+acceptance-web-wiremock:
+    #!/usr/bin/env bash
+    set -e
+    java -jar wiremock/wiremock-standalone.jar --port 8001 --root-dir wiremock \
+        --no-request-journal &
+    WIREMOCK_PID=$!
+    for i in $(seq 1 20); do
+        curl -sf http://localhost:8001/health && break; sleep 0.5
+    done
+    cd java-automation && ./gradlew test -Dchannel=Web
+    EXIT_CODE=$?
+    kill $WIREMOCK_PID 2>/dev/null || true
+    echo "Report: java-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
+
+# Run Java web-channel Playwright tests with WireMock stub backend
+acceptance-web-playwright-wiremock:
+    #!/usr/bin/env bash
+    set -e
+    java -jar wiremock/wiremock-standalone.jar --port 8001 --root-dir wiremock \
+        --no-request-journal &
+    WIREMOCK_PID=$!
+    for i in $(seq 1 20); do
+        curl -sf http://localhost:8001/health && break; sleep 0.5
+    done
+    cd java-automation && ./gradlew test -Dchannel=Web -Dbrowser.impl=playwright
+    EXIT_CODE=$?
+    kill $WIREMOCK_PID 2>/dev/null || true
+    exit $EXIT_CODE
+
 # ─── security ─────────────────────────────────────────────────────────────────
 
 # Audit Python and Node dependencies for known CVEs
