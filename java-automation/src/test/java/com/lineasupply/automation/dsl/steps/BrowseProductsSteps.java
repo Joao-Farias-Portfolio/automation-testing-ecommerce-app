@@ -1,6 +1,6 @@
-package com.lineasupply.automation.stepdefinitions;
+package com.lineasupply.automation.dsl.steps;
 
-import com.lineasupply.automation.dsl.LineasupplyProtocol;
+import com.lineasupply.automation.dsl.protocols.LineasupplyProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import lombok.extern.java.Log;

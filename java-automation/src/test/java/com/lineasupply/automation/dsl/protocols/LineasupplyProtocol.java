@@ -1,4 +1,4 @@
-package com.lineasupply.automation.dsl;
+package com.lineasupply.automation.dsl.protocols;
 
 import com.lineasupply.automation.dsl.domain.CartState;
 import com.lineasupply.automation.dsl.domain.DeliveryState;
