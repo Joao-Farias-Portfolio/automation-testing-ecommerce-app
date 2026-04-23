@@ -200,7 +200,7 @@ public final class SeleniumBrowserPort implements BrowserPort {
 
     @Override
     public void waitUntilAttributeChanges(String css, int index, String attr, String previousValue) {
-        wait(5).until(_ -> {
+        wait(5).until(ignored -> {
             var els = driver().findElements(By.cssSelector(css));
             if (index >= els.size()) return false;
             return !previousValue.equals(els.get(index).getAttribute(attr));
@@ -217,14 +217,14 @@ public final class SeleniumBrowserPort implements BrowserPort {
 
     @Override
     public void waitUntilCondition(Supplier<Boolean> condition, int timeoutSeconds) {
-        wait(timeoutSeconds).until(_ -> condition.get());
+        wait(timeoutSeconds).until(ignored -> condition.get());
     }
 
     public boolean tryWaitUntilPresent(String css, int timeoutSeconds) {
         try {
-            wait(timeoutSeconds).until(_ -> !driver().findElements(By.cssSelector(css)).isEmpty());
+            wait(timeoutSeconds).until(ignored -> !driver().findElements(By.cssSelector(css)).isEmpty());
             return true;
-        } catch (TimeoutException _) {
+        } catch (TimeoutException ignored) {
             return false;
         }
     }
@@ -236,7 +236,7 @@ public final class SeleniumBrowserPort implements BrowserPort {
     private boolean safeIsDisplayed(WebElement el) {
         try {
             return el.isDisplayed();
-        } catch (Exception _) {
+        } catch (Exception ignored) {
             return false;
         }
     }
