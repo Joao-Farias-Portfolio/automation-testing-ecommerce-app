@@ -7,7 +7,10 @@
       },
       "response": {
         "status": 200,
-        "headers": { "Content-Type": "image/jpeg" },
+        "headers": {
+          "Content-Type": "image/jpeg",
+          "Access-Control-Allow-Origin": "http://localhost:3001"
+        },
         "bodyFileName": "fake-image.jpg"
       }
     }

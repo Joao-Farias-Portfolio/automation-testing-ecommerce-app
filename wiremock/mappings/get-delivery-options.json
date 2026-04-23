@@ -4,7 +4,12 @@
       "request": { "method": "GET", "url": "/api/delivery-options" },
       "response": {
         "status": 200,
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "http://localhost:3001",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "*"
+        },
         "jsonBody": [
           {
             "id": 1, "name": "Standard Delivery", "description": "3-5 business days",
