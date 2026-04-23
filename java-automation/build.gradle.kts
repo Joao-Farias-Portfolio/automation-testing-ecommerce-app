@@ -1,7 +1,7 @@
 plugins {
     java
     id("net.serenity-bdd.serenity-gradle-plugin") version "5.3.9"
-    id("io.gatling.gradle") version "3.14.3"
+    id("io.gatling.gradle") version "3.14.3.1"
 }
 
 repositories {
