@@ -1,7 +1,10 @@
 package com.myecommerce.automation.dsl.domain;
 
+import lombok.Builder;
+
 import java.util.List;
 
+@Builder
 public record DeliveryState(
     boolean sectionVisible,
     List<DeliveryOption> options,

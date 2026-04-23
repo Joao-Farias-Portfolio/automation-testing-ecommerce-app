@@ -211,8 +211,14 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         var addToCartButton = findAddToCartButton();
         log.info("getProductDetail: title='%s', imagePresent=%b, buttonEnabled=%b"
             .formatted(title, imagePresent, addToCartButton.isEnabled()));
-        return new ProductDetail(title, price, description, imagePresent,
-            addToCartButton.getText(), addToCartButton.isEnabled());
+        return ProductDetail.builder()
+            .title(title)
+            .price(price)
+            .description(description)
+            .imagePresent(imagePresent)
+            .addToCartButtonText(addToCartButton.getText())
+            .addToCartEnabled(addToCartButton.isEnabled())
+            .build();
     }
 
     private boolean isProductImagePresent() {
@@ -230,13 +236,23 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         boolean visible = !sections.isEmpty() && sections.getFirst().isDisplayed();
         if (!visible) {
             log.info("getDeliveryState: delivery section not visible");
-            return new DeliveryState(false, List.of(), "", false);
+            return DeliveryState.builder()
+                .sectionVisible(false)
+                .options(List.of())
+                .headerText("")
+                .minimumOrderTextPresent(false)
+                .build();
         }
         var options = readDeliveryOptions(sections.getFirst());
         var header = readDeliveryHeader();
         boolean minimumOrderPresent = minimumOrderTextPresent();
         log.info("getDeliveryState: visible=true, options=" + options.size() + ", header='" + header + "'");
-        return new DeliveryState(true, options, header, minimumOrderPresent);
+        return DeliveryState.builder()
+            .sectionVisible(true)
+            .options(options)
+            .headerText(header)
+            .minimumOrderTextPresent(minimumOrderPresent)
+            .build();
     }
 
     @Override

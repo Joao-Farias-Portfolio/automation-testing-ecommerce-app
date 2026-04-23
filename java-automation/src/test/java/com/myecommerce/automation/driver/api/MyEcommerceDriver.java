@@ -40,12 +40,8 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     private int currentProductId = -1;
     private String lastSearchTerm = "";
 
-    // ── Navigation (API is stateless — no browser, no pages) ────────────────────
-
-    @Override
-    public void openHomePage() {
-        log.info("openHomePage: no-op for API channel");
-    }
+    @Override public void openHomePage() {}
+    @Override public void navigateBack() {}
 
     @Override
     public void openCartPage() {
@@ -58,119 +54,79 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     }
 
     @Override
-    public void navigateBack() {
-        log.info("navigateBack: no-op for API channel");
-    }
-
-    // ── Actions ──────────────────────────────────────────────────────────────────
-
-    @Override
     public void clickFirstProductCard() {
-        log.info("clickFirstProductCard: resolving first product via GET /products");
         this.currentProductId = fetchProducts("").getFirst().id();
-        log.info("clickFirstProductCard: selected product id=" + currentProductId);
+        log.info("selected product id=" + currentProductId);
     }
 
     @Override
     public void searchFor(String term) {
-        log.info("searchFor: storing search term '" + term + "'");
         this.lastSearchTerm = term;
     }
 
-    @Override
-    public void addProductToCart() {
-        throw unsupported("Cart");
-    }
-
-    @Override
-    public void removeFirstItemFromCart() {
-        throw unsupported("Cart");
-    }
-
-    @Override
-    public void changeQuantityTo(int quantity) {
-        throw unsupported("Cart");
-    }
-
-    @Override
-    public void selectAlternativeDeliveryOption() {
-        throw unsupported("Delivery option selection");
-    }
-
-    @Override
-    public void toggleFirstSaveButton() {
-        throw unsupported("Save button");
-    }
-
-    @Override
-    public void clickWishlistLink() {
-        throw unsupported("Wishlist link");
-    }
-
-    // ── Queries ──────────────────────────────────────────────────────────────────
+    @Override public void addProductToCart()        { throw unsupported("Cart"); }
+    @Override public void removeFirstItemFromCart() { throw unsupported("Cart"); }
+    @Override public void changeQuantityTo(int qty) { throw unsupported("Cart"); }
+    @Override public void selectAlternativeDeliveryOption() { throw unsupported("Delivery option selection"); }
+    @Override public void toggleFirstSaveButton()   { throw unsupported("Save button"); }
+    @Override public void clickWishlistLink()        { throw unsupported("Wishlist link"); }
 
     @Override
     public ProductListing getProductListing() {
-        log.info("getProductListing: GET /products");
         var cards = fetchProducts("").stream()
-            .map(p -> new ProductCard(p.title(), formatPrice(p.price()), absoluteImageUrl(p.imageUrl())))
+            .map(product -> new ProductCard(product.title(), formatPrice(product.price()), absoluteImageUrl(product.imageUrl())))
             .toList();
-        log.info("getProductListing: " + cards.size() + " products");
+        log.info(cards.size() + " products");
         return new ProductListing(cards, false);
     }
 
     @Override
     public ProductDetail getProductDetail() {
-        log.info("getProductDetail: GET /products/" + currentProductId);
-        var p = fetchProductDetail(currentProductId);
-        log.info("getProductDetail: title='" + p.title() + "'");
-        return new ProductDetail(
-            p.title(),
-            formatPrice(p.price()),
-            p.description(),
-            p.imageUrl() != null && !p.imageUrl().isBlank(),
-            "Add to Cart",
-            true);
+        var product = fetchProductDetail(currentProductId);
+        log.info("title='" + product.title() + "'");
+        return ProductDetail.builder()
+            .title(product.title())
+            .price(formatPrice(product.price()))
+            .description(product.description())
+            .imagePresent(product.imageUrl() != null && !product.imageUrl().isBlank())
+            .addToCartButtonText("Add to Cart")
+            .addToCartEnabled(true)
+            .build();
     }
 
     @Override
     public DeliveryState getDeliveryState() {
-        log.info("getDeliveryState: GET /products/" + currentProductId);
-        var p = fetchProductDetail(currentProductId);
-        var activeOptions = p.deliveryOptions().stream()
-            .filter(ApiDeliveryOption::isActive)
-            .toList();
-        if (activeOptions.isEmpty()) {
-            log.info("getDeliveryState: no active delivery options");
-            return new DeliveryState(false, List.of(), "", false);
+        var activeDeliveryOptions = fetchActiveDeliveryOptions();
+        if (activeDeliveryOptions.isEmpty()) {
+            log.info("no active delivery options");
+            return DeliveryState.builder()
+                .sectionVisible(false)
+                .options(List.of())
+                .headerText("")
+                .minimumOrderTextPresent(false)
+                .build();
         }
-        var options = IntStream.range(0, activeOptions.size())
-            .mapToObj(i -> new DeliveryOption(activeOptions.get(i).name(), i == 0))
-            .toList();
-        // Frontend never renders min_order_amount — always false regardless of backend data
-        log.info("getDeliveryState: " + options.size() + " options");
-        return new DeliveryState(true, options, "Delivery Options", false);
+        log.info(activeDeliveryOptions.size() + " active delivery options");
+        return DeliveryState.builder()
+            .sectionVisible(true)
+            .options(toDeliveryOptions(activeDeliveryOptions))
+            .headerText("Delivery Options")
+            // Frontend never renders min_order_amount — always false regardless of backend data
+            .minimumOrderTextPresent(false)
+            .build();
     }
 
     @Override
     public SearchResults getSearchResults() {
-        log.info("getSearchResults: GET /products?search=" + lastSearchTerm);
         var cards = fetchProducts(lastSearchTerm).stream()
-            .map(p -> new ProductCard(p.title(), formatPrice(p.price()), absoluteImageUrl(p.imageUrl())))
+            .map(product -> new ProductCard(product.title(), formatPrice(product.price()), absoluteImageUrl(product.imageUrl())))
             .toList();
-        log.info("getSearchResults: " + cards.size() + " results for '" + lastSearchTerm + "'");
+        log.info(cards.size() + " results for '" + lastSearchTerm + "'");
         return new SearchResults(cards, cards.isEmpty());
     }
 
-    @Override
-    public CartState getCartState() {
-        throw unsupported("Cart state");
-    }
-
-    @Override
-    public SavedState getSavedState() {
-        throw unsupported("Save state");
-    }
+    @Override public CartState getCartState()   { throw unsupported("Cart state"); }
+    @Override public SavedState getSavedState() { throw unsupported("Save state"); }
 
     @Override
     public String currentUrl() {
@@ -179,17 +135,25 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
         return BASE_URL + "/products";
     }
 
-    // ── Synchronisation (all no-ops — REST Assured responses are synchronous) ────
+    @Override public void waitForCartCountToBe(int expected)     {}
+    @Override public void waitForCartTotalToChange(String prev)  {}
+    @Override public void waitForCartToBeEmpty()                 {}
+    @Override public void waitForCartItemsToAppear()             {}
+    @Override public void waitForProductsToLoad()                {}
+    @Override public void waitForSearchResultsToLoad()           {}
+    @Override public void waitForSavedPageToLoad()               {}
 
-    @Override public void waitForCartCountToBe(int expected)        { /* no-op */ }
-    @Override public void waitForCartTotalToChange(String prev)     { /* no-op */ }
-    @Override public void waitForCartToBeEmpty()                    { /* no-op */ }
-    @Override public void waitForCartItemsToAppear()                { /* no-op */ }
-    @Override public void waitForProductsToLoad()                   { /* no-op */ }
-    @Override public void waitForSearchResultsToLoad()              { /* no-op */ }
-    @Override public void waitForSavedPageToLoad()                  { /* no-op */ }
+    private List<ApiDeliveryOption> fetchActiveDeliveryOptions() {
+        return fetchProductDetail(currentProductId).deliveryOptions().stream()
+            .filter(ApiDeliveryOption::isActive)
+            .toList();
+    }
 
-    // ── HTTP helpers ─────────────────────────────────────────────────────────────
+    private List<DeliveryOption> toDeliveryOptions(List<ApiDeliveryOption> activeOptions) {
+        return IntStream.range(0, activeOptions.size())
+            .mapToObj(index -> new DeliveryOption(activeOptions.get(index).name(), index == 0))
+            .toList();
+    }
 
     private List<ApiProduct> fetchProducts(String searchTerm) {
         var spec = SerenityRest.given().baseUri(BASE_URL);
