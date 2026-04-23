@@ -1,4 +1,4 @@
-package com.lineasupply.automation.dsl.domain;
+package com.myecommerce.automation.dsl.domain;
 
 public record SavedState(
     boolean saveButtonPresent,

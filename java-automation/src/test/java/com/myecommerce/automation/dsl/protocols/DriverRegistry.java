@@ -1,4 +1,4 @@
-package com.lineasupply.automation.dsl.protocols;
+package com.myecommerce.automation.dsl.protocols;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -6,13 +6,13 @@ import java.util.function.Supplier;
 
 public final class DriverRegistry {
 
-    private static final Map<String, Supplier<LineasupplyProtocol>> registry = new HashMap<>();
+    private static final Map<String, Supplier<MyEcommerceProtocol>> registry = new HashMap<>();
 
-    public static void register(String channel, Supplier<LineasupplyProtocol> supplier) {
+    public static void register(String channel, Supplier<MyEcommerceProtocol> supplier) {
         registry.put(channel, supplier);
     }
 
-    public static LineasupplyProtocol create(String channel) {
+    public static MyEcommerceProtocol create(String channel) {
         var supplier = registry.get(channel);
         if (supplier == null) {
             loadByConvention(channel);
@@ -27,7 +27,7 @@ public final class DriverRegistry {
     }
 
     private static void loadByConvention(String channel) {
-        var className = "com.lineasupply.automation.driver.%s.LineasupplyDriver"
+        var className = "com.myecommerce.automation.driver.%s.MyEcommerceDriver"
             .formatted(channel.toLowerCase());
         try {
             Class.forName(className);

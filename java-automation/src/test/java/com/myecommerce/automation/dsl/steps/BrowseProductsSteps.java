@@ -1,6 +1,7 @@
-package com.lineasupply.automation.dsl.steps;
+package com.myecommerce.automation.dsl.steps;
 
-import com.lineasupply.automation.dsl.protocols.LineasupplyProtocol;
+import com.myecommerce.automation.dsl.protocols.DriverFactory;
+import com.myecommerce.automation.dsl.protocols.MyEcommerceProtocol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import lombok.extern.java.Log;
@@ -11,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Log
 public class BrowseProductsSteps {
 
-    private final LineasupplyProtocol protocol = DriverFactory.create();
+    private final MyEcommerceProtocol protocol = DriverFactory.create();
 
     @Given("the shopper is on the homepage")
     public void shopperIsOnHomepage() {

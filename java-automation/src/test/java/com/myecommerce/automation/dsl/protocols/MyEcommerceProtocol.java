@@ -1,13 +1,13 @@
-package com.lineasupply.automation.dsl.protocols;
+package com.myecommerce.automation.dsl.protocols;
 
-import com.lineasupply.automation.dsl.domain.CartState;
-import com.lineasupply.automation.dsl.domain.DeliveryState;
-import com.lineasupply.automation.dsl.domain.ProductDetail;
-import com.lineasupply.automation.dsl.domain.ProductListing;
-import com.lineasupply.automation.dsl.domain.SavedState;
-import com.lineasupply.automation.dsl.domain.SearchResults;
+import com.myecommerce.automation.dsl.domain.CartState;
+import com.myecommerce.automation.dsl.domain.DeliveryState;
+import com.myecommerce.automation.dsl.domain.ProductDetail;
+import com.myecommerce.automation.dsl.domain.ProductListing;
+import com.myecommerce.automation.dsl.domain.SavedState;
+import com.myecommerce.automation.dsl.domain.SearchResults;
 
-public interface LineasupplyProtocol {
+public interface MyEcommerceProtocol {
 
     void openHomePage();
     void openCartPage();
