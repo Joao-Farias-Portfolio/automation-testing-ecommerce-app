@@ -315,12 +315,6 @@ jobs:
         run: npm audit --audit-level=high
         continue-on-error: true
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "26"
-          cache: gradle
-
       - name: OWASP Dependency-Check (Java/Gradle)
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -329,8 +323,6 @@ jobs:
           format: HTML
           args: --failOnCVSS 7 --enableRetired
           out: reports
-        env:
-          JAVA_HOME: ""
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v7
