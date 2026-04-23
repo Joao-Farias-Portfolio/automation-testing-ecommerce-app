@@ -8,60 +8,64 @@ import io.cucumber.java.en.When;
 import lombok.extern.java.Log;
 import org.assertj.core.api.SoftAssertions;
 
+import java.util.function.Supplier;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Log
 public class CartSteps {
 
-    private final CartProtocol cart = DriverFactory.createCart();
+    private final Supplier<CartProtocol> cartSupplier = DriverFactory::createCart;
+
+    private CartProtocol cart() { return cartSupplier.get(); }
     private int    notedItemCount;
     private String notedTotal;
 
     @Given("the shopper notes the current cart count")
     public void shopperNotesCurrentCartCount() {
-        notedItemCount = cart.getCartState().itemCount();
+        notedItemCount = cart().getCartState().itemCount();
         log.fine("noted cart count: " + notedItemCount);
     }
 
     @When("the shopper adds the product to the cart")
     public void shopperAddsProductToCart() {
-        cart.addProductToCart();
+        cart().addProductToCart();
         log.fine("added product to cart");
     }
 
     @When("the shopper navigates to the cart page")
     public void shopperNavigatesToCartPage() {
-        cart.viewCart();
+        cart().viewCart();
         log.fine("navigated to cart page");
     }
 
     @When("the shopper returns to the homepage")
     public void shopperReturnsToHomepage() {
-        cart.browseCatalogue();
+        cart().browseCatalogue();
         log.fine("returned to home page");
     }
 
     @When("the shopper changes the quantity to {int}")
     public void shopperChangesQuantityTo(int quantity) {
-        cart.changeQuantityTo(quantity);
+        cart().changeQuantityTo(quantity);
         log.fine("changed quantity to " + quantity);
     }
 
     @When("the shopper removes the first cart item")
     public void shopperRemovesFirstCartItem() {
-        cart.removeFirstItemFromCart();
+        cart().removeFirstItemFromCart();
         log.fine("removed first cart item");
     }
 
     @When("the shopper notes the current cart total")
     public void shopperNotesCurrentCartTotal() {
-        notedTotal = cart.getCartState().total();
+        notedTotal = cart().getCartState().total();
         log.fine("noted cart total: " + notedTotal);
     }
 
     @Then("the cart badge should show {int} item(s)")
     public void cartBadgeShouldShow(int expectedCount) {
-        assertThat(cart.getCartState().itemCount())
+        assertThat(cart().getCartState().itemCount())
             .as("cart badge should show " + expectedCount + " item(s)")
             .isEqualTo(expectedCount);
         log.fine("cart badge shows " + expectedCount + " item(s)");
@@ -70,7 +74,7 @@ public class CartSteps {
     @Then("the cart badge should have increased by {int}")
     public void cartBadgeShouldHaveIncreasedBy(int increment) {
         int expected = notedItemCount + increment;
-        assertThat(cart.getCartState().itemCount())
+        assertThat(cart().getCartState().itemCount())
             .as("cart badge should have increased by " + increment)
             .isEqualTo(expected);
         log.fine("cart badge increased by " + increment + " to " + expected);
@@ -78,7 +82,7 @@ public class CartSteps {
 
     @Then("the cart should contain at least {int} items")
     public void cartShouldContainAtLeastItems(int minimum) {
-        assertThat(cart.getCartState().items().size())
+        assertThat(cart().getCartState().items().size())
             .as("cart should contain at least " + minimum + " items")
             .isGreaterThanOrEqualTo(minimum);
         log.fine("cart contains at least " + minimum + " items");
@@ -86,7 +90,7 @@ public class CartSteps {
 
     @Then("the cart total should be visible and show a price")
     public void cartTotalShouldBeVisibleAndShowPrice() {
-        var total = cart.getCartState().total();
+        var total = cart().getCartState().total();
         assertThat(total)
             .as("cart total should show a price with $")
             .matches(".*\\$\\d+.*");
@@ -95,7 +99,7 @@ public class CartSteps {
 
     @Then("the cart total should have changed")
     public void cartTotalShouldHaveChanged() {
-        assertThat(cart.getCartState().total())
+        assertThat(cart().getCartState().total())
             .as("cart total should have changed from " + notedTotal)
             .isNotEqualTo(notedTotal);
         log.fine("cart total changed from " + notedTotal);
@@ -103,7 +107,7 @@ public class CartSteps {
 
     @Then("the cart should show an empty state")
     public void cartShouldShowEmptyState() {
-        assertThat(cart.getCartState().isEmpty())
+        assertThat(cart().getCartState().isEmpty())
             .as("cart should show empty state")
             .isTrue();
         log.fine("cart is empty");
@@ -112,7 +116,7 @@ public class CartSteps {
     @Then("the first cart item should be visible")
     public void firstCartItemShouldBeVisible() {
         SoftAssertions soft = new SoftAssertions();
-        soft.assertThat(cart.getCartState().items())
+        soft.assertThat(cart().getCartState().items())
             .as("cart should have at least one item")
             .isNotEmpty();
         soft.assertAll();

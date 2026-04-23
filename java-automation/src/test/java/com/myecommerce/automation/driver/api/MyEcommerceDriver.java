@@ -1,8 +1,6 @@
 package com.myecommerce.automation.driver.api;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.myecommerce.automation.driver.ports.HttpPort;
 import com.myecommerce.automation.dsl.domain.DeliveryOption;
 import com.myecommerce.automation.dsl.domain.DeliveryState;
 import com.myecommerce.automation.dsl.domain.ProductCard;
@@ -12,11 +10,7 @@ import com.myecommerce.automation.dsl.domain.SearchResults;
 import com.myecommerce.automation.dsl.protocols.CatalogueProtocol;
 import com.myecommerce.automation.dsl.protocols.Channel;
 import com.myecommerce.automation.dsl.protocols.DriverRegistry;
-import io.restassured.RestAssured;
-import io.restassured.common.mapper.TypeRef;
-import io.restassured.config.ObjectMapperConfig;
 import lombok.extern.java.Log;
-import net.serenitybdd.rest.SerenityRest;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -24,20 +18,19 @@ import java.util.stream.IntStream;
 @Log
 public final class MyEcommerceDriver implements CatalogueProtocol {
 
-    static {
-        DriverRegistry.register(Channel.API, MyEcommerceDriver::new);
-        RestAssured.config = RestAssured.config().objectMapperConfig(
-            ObjectMapperConfig.objectMapperConfig()
-                .jackson2ObjectMapperFactory((cls, charset) ->
-                    new ObjectMapper()
-                        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                        .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)));
-    }
-
     private static final String BASE_URL = "http://localhost:8001";
 
+    static {
+        DriverRegistry.register(Channel.API, () -> new MyEcommerceDriver(new RestAssuredHttpPort(BASE_URL)));
+    }
+
+    private final HttpPort http;
     private int currentProductId = -1;
     private String lastSearchTerm = "";
+
+    MyEcommerceDriver(HttpPort http) {
+        this.http = http;
+    }
 
     @Override public void browseCatalogue() {}
     @Override public void returnToProductListing() {}
@@ -57,7 +50,7 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
     @Override
     public ProductListing getProductListing() {
         var cards = fetchProducts("").stream()
-            .map(product -> new ProductCard(product.title(), formatPrice(product.price()), absoluteImageUrl(product.imageUrl())))
+            .map(p -> new ProductCard(p.title(), formatPrice(p.price()), absoluteImageUrl(p.imageUrl())))
             .toList();
         log.info("%d products".formatted(cards.size()));
         return new ProductListing(cards, false);
@@ -79,8 +72,8 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
 
     @Override
     public DeliveryState getDeliveryState() {
-        var activeDeliveryOptions = fetchActiveDeliveryOptions();
-        if (activeDeliveryOptions.isEmpty()) {
+        var activeOptions = fetchActiveDeliveryOptions();
+        if (activeOptions.isEmpty()) {
             log.info("no active delivery options");
             return DeliveryState.builder()
                 .sectionVisible(false)
@@ -89,10 +82,10 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
                 .minimumOrderTextPresent(false)
                 .build();
         }
-        log.info("%d active delivery options".formatted(activeDeliveryOptions.size()));
+        log.info("%d active delivery options".formatted(activeOptions.size()));
         return DeliveryState.builder()
             .sectionVisible(true)
-            .options(toDeliveryOptions(activeDeliveryOptions))
+            .options(toDeliveryOptions(activeOptions))
             .headerText("Delivery Options")
             .minimumOrderTextPresent(false)
             .build();
@@ -101,7 +94,7 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
     @Override
     public SearchResults getSearchResults() {
         var cards = fetchProducts(lastSearchTerm).stream()
-            .map(product -> new ProductCard(product.title(), formatPrice(product.price()), absoluteImageUrl(product.imageUrl())))
+            .map(p -> new ProductCard(p.title(), formatPrice(p.price()), absoluteImageUrl(p.imageUrl())))
             .toList();
         log.info("%d results for '%s'".formatted(cards.size(), lastSearchTerm));
         return new SearchResults(cards, cards.isEmpty());
@@ -114,6 +107,19 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
         return BASE_URL + "/products";
     }
 
+    // ── private helpers ───────────────────────────────────────────────────────
+
+    private List<ApiProduct> fetchProducts(String searchTerm) {
+        if (searchTerm.isBlank()) {
+            return http.getListAs("/products", ApiProduct.class);
+        }
+        return http.getListWithQueryAs("/products", "search", searchTerm, ApiProduct.class);
+    }
+
+    private ApiProductDetail fetchProductDetail(int id) {
+        return http.getAs("/products/" + id, ApiProductDetail.class);
+    }
+
     private List<ApiDeliveryOption> fetchActiveDeliveryOptions() {
         return fetchProductDetail(currentProductId).deliveryOptions().stream()
             .filter(ApiDeliveryOption::isActive)
@@ -122,25 +128,8 @@ public final class MyEcommerceDriver implements CatalogueProtocol {
 
     private List<DeliveryOption> toDeliveryOptions(List<ApiDeliveryOption> activeOptions) {
         return IntStream.range(0, activeOptions.size())
-            .mapToObj(index -> new DeliveryOption(activeOptions.get(index).name(), index == 0))
+            .mapToObj(i -> new DeliveryOption(activeOptions.get(i).name(), i == 0))
             .toList();
-    }
-
-    private List<ApiProduct> fetchProducts(String searchTerm) {
-        var spec = SerenityRest.given().baseUri(BASE_URL);
-        if (!searchTerm.isBlank()) {
-            spec = spec.queryParam("search", searchTerm);
-        }
-        return spec.get("/products")
-            .then().statusCode(200)
-            .extract().as(new TypeRef<>() {});
-    }
-
-    private ApiProductDetail fetchProductDetail(int id) {
-        return SerenityRest.given().baseUri(BASE_URL)
-            .get("/products/" + id)
-            .then().statusCode(200)
-            .extract().as(ApiProductDetail.class);
     }
 
     private String formatPrice(double price) {
