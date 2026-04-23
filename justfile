@@ -299,3 +299,24 @@ test-all:
     @just test-e2e
     @just test-java
     @just test-java-api
+
+# ─── performance ──────────────────────────────────────────────────────────────
+
+# k6 smoke test — quick sanity check (2 min, 5 VUs)
+perf-k6-smoke:
+    k6 run performance/k6/smoke.js
+
+# k6 load test — sustained load (5 min, 20 VUs)
+perf-k6-load:
+    k6 run performance/k6/load.js
+
+# Gatling simulation — richer HTML report (requires backend on :8001)
+perf-gatling:
+    cd java-automation && ./gradlew gatlingRun
+
+# ─── security ─────────────────────────────────────────────────────────────────
+
+# Audit Python and Node dependencies for known CVEs
+security-check:
+    cd backend && uv run pip-audit
+    npm audit --audit-level=high
