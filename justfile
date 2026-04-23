@@ -208,6 +208,12 @@ test-java-tag TAG:
 test-java-feature FEATURE:
     cd java-automation && ./gradlew test -Dchannel=Web -Dcucumber.filter.tags="@{{FEATURE}}"
 
+# Run @api-tagged acceptance scenarios via HTTP against the backend (requires backend on :8001)
+# Named test-java-acceptance-api because test-java-api is used by the java-api-testing project
+test-java-acceptance-api:
+    cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api"
+    @echo "Report: java-automation/target/site/serenity/index.html"
+
 # Open the Serenity HTML report
 report-java:
     @open java-automation/target/site/serenity/index.html
