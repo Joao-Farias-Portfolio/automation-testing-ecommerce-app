@@ -293,7 +293,7 @@ public final class MyEcommerceDriver implements MyEcommerceProtocol {
     }
 
     private boolean isAriaPressed(WebElement el) {
-        return "true".equals(el.getAttribute("aria-pressed"));
+        return Boolean.parseBoolean(el.getAttribute("aria-pressed"));
     }
 
     @Override
