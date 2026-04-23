@@ -1,5 +1,22 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const backendServer =
+  process.env.WIREMOCK === 'true'
+    ? {
+        command:
+          'java -jar ../wiremock/wiremock-standalone.jar --port 8001 --root-dir ../wiremock --no-request-journal',
+        url: 'http://localhost:8001/health',
+        reuseExistingServer: !process.env.CI,
+        timeout: 30_000,
+      }
+    : {
+        command:
+          'cd ../backend && uv run --active python -m app.seed && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001',
+        url: 'http://localhost:8001/health',
+        reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI,
+        timeout: 180_000,
+      }
+
 export default defineConfig({
   testDir: './e2e/tests',
   timeout: 45000, // Increase for stability
@@ -36,13 +53,7 @@ export default defineConfig({
   ],
 
   webServer: [
-    {
-      command:
-        'cd ../backend && uv run --active python -m app.seed && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001',
-      url: 'http://localhost:8001/health',
-      reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI, // Reuse locally to avoid port conflicts, fresh in CI
-      timeout: 180000, // Increased timeout for CI
-    },
+    backendServer,
     {
       // Use preview in CI for stability, dev locally for faster iteration
       command: process.env.CI
@@ -50,7 +61,7 @@ export default defineConfig({
         : 'npm run dev',
       url: 'http://localhost:3001',
       reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI,
-      timeout: 240000, // Increased timeout for CI build step
+      timeout: 240_000, // Increased timeout for CI build step
     },
   ],
 })
