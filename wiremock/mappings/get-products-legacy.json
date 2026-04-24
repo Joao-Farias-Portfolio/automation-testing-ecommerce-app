@@ -1,0 +1,60 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/products"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "http://localhost:3001",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "*"
+        },
+        "jsonBody": [
+          {
+            "id": 1,
+            "title": "Wireless Headphones",
+            "description": "Premium noise-cancelling headphones",
+            "price": 89.99,
+            "category_id": 1,
+            "is_saved": false,
+            "image_url": "/products/1/image",
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "category": { "id": 1, "name": "Electronics", "created_at": "2024-01-01T00:00:00", "updated_at": "2024-01-01T00:00:00" },
+            "delivery_summary": { "has_free": true, "cheapest_price": 0, "fastest_days_min": 1, "fastest_days_max": 3, "options_count": 2 }
+          },
+          {
+            "id": 2,
+            "title": "Ergonomic Chair",
+            "description": "Lumbar support office chair",
+            "price": 349.00,
+            "category_id": 2,
+            "is_saved": false,
+            "image_url": "/products/2/image",
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "category": { "id": 2, "name": "Furniture", "created_at": "2024-01-01T00:00:00", "updated_at": "2024-01-01T00:00:00" },
+            "delivery_summary": { "has_free": false, "cheapest_price": 4.99, "fastest_days_min": 2, "fastest_days_max": 5, "options_count": 2 }
+          },
+          {
+            "id": 3,
+            "title": "Coffee Maker",
+            "description": "Programmable 12-cup coffee maker",
+            "price": 59.99,
+            "category_id": 3,
+            "is_saved": true,
+            "image_url": "/products/3/image",
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "category": { "id": 3, "name": "Kitchen", "created_at": "2024-01-01T00:00:00", "updated_at": "2024-01-01T00:00:00" },
+            "delivery_summary": { "has_free": true, "cheapest_price": 0, "fastest_days_min": 1, "fastest_days_max": 2, "options_count": 3 }
+          }
+        ]
+      }
+    }
+  ]
+}
