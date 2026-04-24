@@ -397,7 +397,121 @@ jobs:
           name: serenity-api-okhttp-report
           path: java-automation/target/site/serenity/
 
-  # ── 9. Playwright E2E — WireMock frontend isolation ──────────────────────────
+  # ── 9. Kotlin Web acceptance tests (Serenity BDD + Cucumber + Selenium) ────────
+  kotlin-web-acceptance:
+    name: Kotlin acceptance tests — Web channel (Serenity/Cucumber/Selenium)
+    needs: [backend-unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v5
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('kotlin-automation/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
+
+      - run: uv python install
+
+      - name: Install backend deps
+        run: cd backend && uv sync --locked
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Seed database and start services
+        run: |
+          cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          cd frontend && npx vite preview --host 0.0.0.0 --port 3001 &
+          sleep 5
+          cd backend && uv run python -m app.seed
+
+      - name: Run Kotlin Serenity/Cucumber tests (Web channel, headless)
+        run: cd kotlin-automation && ./gradlew test -Dchannel=Web
+
+      - name: Upload Kotlin Serenity Web report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kotlin-serenity-web-report
+          path: kotlin-automation/target/site/serenity/
+
+  # ── 10. Kotlin API acceptance tests ─────────────────────────────────────────
+  kotlin-api-acceptance:
+    name: Kotlin acceptance tests — API channel (REST Assured)
+    needs: [backend-unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v5
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('kotlin-automation/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
+
+      - run: uv python install
+
+      - name: Install backend deps
+        run: cd backend && uv sync --locked
+
+      - name: Seed database and start backend
+        run: |
+          cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          sleep 5
+          cd backend && uv run python -m app.seed
+
+      - name: Run Kotlin Serenity/Cucumber tests (API channel)
+        run: |
+          cd kotlin-automation && ./gradlew test \
+            -Dchannel=API \
+            -Dcucumber.filter.tags="@api and not @wip"
+
+      - name: Upload Kotlin Serenity API report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kotlin-serenity-api-report
+          path: kotlin-automation/target/site/serenity/
+
+  # ── 11. Playwright E2E — WireMock frontend isolation ──────────────────────────
   e2e-browser-wiremock:
     name: E2E browser tests — WireMock frontend isolation (Playwright)
     needs: [static-analysis, build-frontend]
@@ -453,7 +567,7 @@ jobs:
           name: playwright-wiremock-report
           path: frontend/playwright-report/
 
-  # ── 10. Java Web acceptance — WireMock frontend isolation ────────────────────
+  # ── 12. Java Web acceptance — WireMock frontend isolation ────────────────────
   java-web-acceptance-wiremock:
     name: Java acceptance tests — Web channel (WireMock frontend isolation)
     needs: [static-analysis, build-frontend]
@@ -510,7 +624,7 @@ jobs:
           name: serenity-web-wiremock-report
           path: java-automation/target/site/serenity/
 
-  # ── 11. Security scanning ─────────────────────────────────────────────────────
+  # ── 13. Security scanning ─────────────────────────────────────────────────────
   security-scan:
     name: Security scan (pip-audit + npm audit + OWASP)
     needs:
@@ -519,6 +633,8 @@ jobs:
       - java-api-acceptance
       - java-web-acceptance-playwright
       - java-api-acceptance-okhttp
+      - kotlin-web-acceptance
+      - kotlin-api-acceptance
       - e2e-browser-wiremock
       - java-web-acceptance-wiremock
     runs-on: ubuntu-latest
