@@ -295,6 +295,41 @@ acceptance-api-all-adapters: _ensure-logs-dir
 report-java:
     @open java-automation/target/site/serenity/index.html
 
+# ─── kotlin-automation ────────────────────────────────────────────────────────
+
+# Kotlin acceptance tests — Web channel (27 scenarios, Selenium headless)
+acceptance-kt-web:
+    cd kotlin-automation && ./gradlew test -Dchannel=Web
+    @echo "Report: kotlin-automation/target/site/serenity/index.html"
+
+# Kotlin acceptance tests — API channel (8 @api scenarios)
+acceptance-kt-api: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
+        for i in $(seq 1 20); do
+            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
+            sleep 0.5
+        done
+        STARTED_BACKEND=true
+    fi
+    cd kotlin-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api and not @wip"
+    EXIT_CODE=$?
+    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+        echo "Stopping backend ..."
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: kotlin-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
+
+# Open the Kotlin Serenity HTML report
+report-kotlin:
+    @open kotlin-automation/target/site/serenity/index.html
+
 # ─── java-api-testing ─────────────────────────────────────────────────────────
 
 # Run Serenity BDD REST API tests (requires backend running on :8001)
