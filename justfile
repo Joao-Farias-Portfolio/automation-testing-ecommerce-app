@@ -330,6 +330,44 @@ acceptance-kt-api: _ensure-logs-dir
 report-kotlin:
     @open kotlin-automation/target/site/serenity/index.html
 
+# ─── typescript-automation ────────────────────────────────────────────────────
+
+# Install TypeScript automation dependencies
+install-ts:
+    cd typescript-automation && npm install
+    npx --yes playwright install --with-deps chromium
+
+# TypeScript acceptance tests — Web channel (27 scenarios, Playwright headless)
+acceptance-ts-web:
+    cd typescript-automation && CHANNEL=Web npx cucumber-js \
+        --tags 'not @wip' --format progress --format html:reports/web-report.html
+    @echo "Report: typescript-automation/reports/web-report.html"
+
+# TypeScript acceptance tests — API channel (8 @api scenarios)
+acceptance-ts-api: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
+        for i in $(seq 1 20); do
+            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
+            sleep 0.5
+        done
+        STARTED_BACKEND=true
+    fi
+    cd typescript-automation && CHANNEL=API npx cucumber-js \
+        --tags '@api and not @wip' --format progress --format html:reports/api-report.html
+    EXIT_CODE=$?
+    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+        echo "Stopping backend ..."
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: typescript-automation/reports/api-report.html"
+    exit $EXIT_CODE
+
 # ─── java-api-testing ─────────────────────────────────────────────────────────
 
 # Run Serenity BDD REST API tests (requires backend running on :8001)
