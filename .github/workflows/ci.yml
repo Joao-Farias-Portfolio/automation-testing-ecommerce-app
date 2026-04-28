@@ -511,7 +511,111 @@ jobs:
           name: kotlin-serenity-api-report
           path: kotlin-automation/target/site/serenity/
 
-  # ── 11. Playwright E2E — WireMock frontend isolation ──────────────────────────
+  # ── 11. TypeScript Web acceptance tests (CucumberJS + Playwright) ───────────
+  typescript-web-acceptance:
+    name: TypeScript acceptance tests — Web channel (CucumberJS/Playwright)
+    needs: [backend-unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: typescript-automation/package-lock.json
+
+      - name: Install TypeScript automation deps
+        run: cd typescript-automation && npm ci
+
+      - name: Install Playwright browsers
+        run: cd typescript-automation && npx playwright install --with-deps chromium
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
+
+      - run: uv python install
+
+      - name: Install backend deps
+        run: cd backend && uv sync --locked
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Seed database and start services
+        run: |
+          cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          cd frontend && npx vite preview --host 0.0.0.0 --port 3001 &
+          sleep 5
+          cd backend && uv run python -m app.seed
+
+      - name: Run TypeScript CucumberJS tests (Web channel, headless)
+        run: |
+          cd typescript-automation && CHANNEL=Web npx cucumber-js \
+            --tags 'not @wip' --format progress --format html:reports/web-report.html
+
+      - name: Upload TypeScript CucumberJS Web report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: typescript-cucumber-web-report
+          path: typescript-automation/reports/web-report.html
+
+  # ── 12. TypeScript API acceptance tests ──────────────────────────────────────
+  typescript-api-acceptance:
+    name: TypeScript acceptance tests — API channel (Axios)
+    needs: [backend-unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: typescript-automation/package-lock.json
+
+      - name: Install TypeScript automation deps
+        run: cd typescript-automation && npm ci
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+          prune-cache: false
+
+      - run: uv python install
+
+      - name: Install backend deps
+        run: cd backend && uv sync --locked
+
+      - name: Seed database and start backend
+        run: |
+          cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          sleep 5
+          cd backend && uv run python -m app.seed
+
+      - name: Run TypeScript CucumberJS tests (API channel)
+        run: |
+          cd typescript-automation && CHANNEL=API npx cucumber-js \
+            --tags '@api and not @wip' --format progress --format html:reports/api-report.html
+
+      - name: Upload TypeScript CucumberJS API report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: typescript-cucumber-api-report
+          path: typescript-automation/reports/api-report.html
+
+  # ── 13. Playwright E2E — WireMock frontend isolation ──────────────────────────
   e2e-browser-wiremock:
     name: E2E browser tests — WireMock frontend isolation (Playwright)
     needs: [static-analysis, build-frontend]
@@ -567,7 +671,7 @@ jobs:
           name: playwright-wiremock-report
           path: frontend/playwright-report/
 
-  # ── 12. Java Web acceptance — WireMock frontend isolation ────────────────────
+  # ── 14. Java Web acceptance — WireMock frontend isolation ────────────────────
   java-web-acceptance-wiremock:
     name: Java acceptance tests — Web channel (WireMock frontend isolation)
     needs: [static-analysis, build-frontend]
@@ -624,7 +728,7 @@ jobs:
           name: serenity-web-wiremock-report
           path: java-automation/target/site/serenity/
 
-  # ── 13. Security scanning ─────────────────────────────────────────────────────
+  # ── 15. Security scanning ─────────────────────────────────────────────────────
   security-scan:
     name: Security scan (pip-audit + npm audit + OWASP)
     needs:
@@ -635,6 +739,8 @@ jobs:
       - java-api-acceptance-okhttp
       - kotlin-web-acceptance
       - kotlin-api-acceptance
+      - typescript-web-acceptance
+      - typescript-api-acceptance
       - e2e-browser-wiremock
       - java-web-acceptance-wiremock
     runs-on: ubuntu-latest
@@ -685,7 +791,7 @@ jobs:
           name: dependency-check-report
           path: reports/
 
-  # ── 12. Publish Docker images to GHCR ────────────────────────────────────────
+  # ── 16. Publish Docker images to GHCR ────────────────────────────────────────
   publish:
     name: Publish Docker images to GHCR
     needs: [security-scan]
@@ -742,7 +848,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 8. Performance — k6 (smoke + load) ──────────────────────────────────────
+  # ── 17. Performance — k6 (smoke + load) ──────────────────────────────────────
   performance-k6:
     name: Performance tests — k6
     needs: [security-scan]
