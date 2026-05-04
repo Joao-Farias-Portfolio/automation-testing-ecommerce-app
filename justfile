@@ -2,7 +2,7 @@
 # Install 'just' via: brew install just (macOS) or cargo install just
 
 # ─── variables ──────────────────────────────────────────────
-LOG_DIR := "logs"
+LOG_DIR := justfile_directory() / "logs"
 # Latest Node 22 from nvm (Vite requires Node 20+ / 22+)
 NODE22 := `ls -d $HOME/.nvm/versions/node/v22.* 2>/dev/null | sort -V | tail -1`
 
@@ -50,9 +50,9 @@ dev-headless: _ensure-logs-dir
     > {{LOG_DIR}}/backend.log
     > {{LOG_DIR}}/frontend.log
     # backend
-    cd backend && uv run --active uvicorn app.main:app --reload --reload-exclude '.venv/*' --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $$! > {{LOG_DIR}}/backend.pid
+    cd backend && uv run --active uvicorn app.main:app --reload --reload-exclude '.venv/*' --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1 & echo $$! > {{LOG_DIR}}/backend.pid
     # frontend (must use Node 22+ for Vite)
-    cd frontend && PATH="{{NODE22}}/bin:$PATH" npm run dev -- --host 0.0.0.0 --port 3001 >> ../{{LOG_DIR}}/frontend.log 2>&1 & echo $$! > {{LOG_DIR}}/frontend.pid
+    cd frontend && PATH="{{NODE22}}/bin:$PATH" npm run dev -- --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1 & echo $$! > {{LOG_DIR}}/frontend.pid
     @echo "Services started in background. Use 'just logs' to inspect and 'just stop' to stop."
 
 # Stop headless dev servers
@@ -186,31 +186,58 @@ migrate-history:
 # ─── java-automation ──────────────────────────────────────────────────────────
 
 # Run all Serenity BDD acceptance tests via browser (Web channel, 27 scenarios)
-acceptance-web:
+acceptance-web: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
     cd java-automation && ./gradlew test -Dchannel=Web
-    @echo "Report: java-automation/target/site/serenity/index.html"
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: java-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
 
 # Run @api acceptance scenarios directly against the backend via HTTP (API channel, 8 scenarios)
 acceptance-api: _ensure-logs-dir
     #!/usr/bin/env bash
     set -e
-    # Start backend if not already listening on :8001
+    STARTED_BACKEND=false
     if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
         echo "Starting backend on :8001 ..."
         > {{LOG_DIR}}/backend.log
-        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
-        # Wait for backend to be ready
-        for i in $(seq 1 20); do
-            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
-            sleep 0.5
-        done
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
         STARTED_BACKEND=true
     fi
-    # Run the tests
     cd java-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api and not @wip"
     EXIT_CODE=$?
-    # Stop backend only if this recipe started it
-    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+    if [ "$STARTED_BACKEND" = "true" ]; then
         echo "Stopping backend ..."
         kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
         rm -f {{LOG_DIR}}/backend.pid
@@ -248,32 +275,94 @@ test-java-acceptance-api:
     @echo "Report: java-automation/target/site/serenity/index.html"
 
 # Web channel using Playwright instead of Selenium (headless by default)
-acceptance-web-playwright:
+acceptance-web-playwright: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
     cd java-automation && ./gradlew test -Dchannel=Web -Dbrowser.impl=playwright
-    @echo "Report: java-automation/target/site/serenity/index.html"
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: java-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
 
 # Web channel using Playwright, headed browser (for debugging)
-acceptance-web-playwright-headed:
+acceptance-web-playwright-headed: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
     cd java-automation && ./gradlew test -Dchannel=Web -Dbrowser.impl=playwright -Dheaded=true
-    @echo "Report: java-automation/target/site/serenity/index.html"
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: java-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
 
 # API channel using OkHttp instead of REST Assured (8 @api scenarios)
 acceptance-api-okhttp: _ensure-logs-dir
     #!/usr/bin/env bash
     set -e
+    STARTED_BACKEND=false
     if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
         echo "Starting backend on :8001 ..."
         > {{LOG_DIR}}/backend.log
-        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
-        for i in $(seq 1 20); do
-            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
-            sleep 0.5
-        done
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
         STARTED_BACKEND=true
     fi
     cd java-automation && ./gradlew test -Dchannel=API -Dhttp.impl=okhttp -Dcucumber.filter.tags="@api and not @wip"
     EXIT_CODE=$?
-    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+    if [ "$STARTED_BACKEND" = "true" ]; then
         echo "Stopping backend ..."
         kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
         rm -f {{LOG_DIR}}/backend.pid
@@ -298,27 +387,58 @@ report-java:
 # ─── kotlin-automation ────────────────────────────────────────────────────────
 
 # Kotlin acceptance tests — Web channel (27 scenarios, Selenium headless)
-acceptance-kt-web:
+acceptance-kt-web: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
     cd kotlin-automation && ./gradlew test -Dchannel=Web
-    @echo "Report: kotlin-automation/target/site/serenity/index.html"
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: kotlin-automation/target/site/serenity/index.html"
+    exit $EXIT_CODE
 
 # Kotlin acceptance tests — API channel (8 @api scenarios)
 acceptance-kt-api: _ensure-logs-dir
     #!/usr/bin/env bash
     set -e
+    STARTED_BACKEND=false
     if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
         echo "Starting backend on :8001 ..."
         > {{LOG_DIR}}/backend.log
-        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
-        for i in $(seq 1 20); do
-            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
-            sleep 0.5
-        done
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
         STARTED_BACKEND=true
     fi
     cd kotlin-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@api and not @wip"
     EXIT_CODE=$?
-    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+    if [ "$STARTED_BACKEND" = "true" ]; then
         echo "Stopping backend ..."
         kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
         rm -f {{LOG_DIR}}/backend.pid
@@ -338,29 +458,60 @@ install-ts:
     npx --yes playwright install --with-deps chromium
 
 # TypeScript acceptance tests — Web channel (27 scenarios, Playwright headless)
-acceptance-ts-web:
+acceptance-ts-web: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
     cd typescript-automation && CHANNEL=Web npx cucumber-js \
         --tags 'not @wip' --format progress --format html:reports/web-report.html
-    @echo "Report: typescript-automation/reports/web-report.html"
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    echo "Report: typescript-automation/reports/web-report.html"
+    exit $EXIT_CODE
 
 # TypeScript acceptance tests — API channel (8 @api scenarios)
 acceptance-ts-api: _ensure-logs-dir
     #!/usr/bin/env bash
     set -e
+    STARTED_BACKEND=false
     if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
         echo "Starting backend on :8001 ..."
         > {{LOG_DIR}}/backend.log
-        cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> ../{{LOG_DIR}}/backend.log 2>&1 & echo $! > ../{{LOG_DIR}}/backend.pid
-        for i in $(seq 1 20); do
-            lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break
-            sleep 0.5
-        done
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
         STARTED_BACKEND=true
     fi
     cd typescript-automation && CHANNEL=API npx cucumber-js \
         --tags '@api and not @wip' --format progress --format html:reports/api-report.html
     EXIT_CODE=$?
-    if [ "${STARTED_BACKEND:-false}" = "true" ]; then
+    if [ "$STARTED_BACKEND" = "true" ]; then
         echo "Stopping backend ..."
         kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
         rm -f {{LOG_DIR}}/backend.pid
