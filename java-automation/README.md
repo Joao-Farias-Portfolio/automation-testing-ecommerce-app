@@ -111,9 +111,9 @@ src/test/java/com/myecommerce/automation/
 │       └── SavedWishlistSteps.java
 │
 └── driver/
-    ├── ports/                          Technology-agnostic interfaces (the seams)
-    │   ├── BrowserPort.java            44 methods: navigation, queries, actions, waits
-    │   └── HttpPort.java               3 methods: getAs, getListAs, getListWithQueryAs
+    ├── ports/                          Technology-agnostic interfaces ("seams" per _Working Effectively with Legacy Code_)
+    │   ├── BrowserPort.java            Navigation, element queries, actions, waits
+    │   └── HttpPort.java               Typed GET by path, list, and query parameter
     │
     ├── web/
     │   ├── MyEcommerceDriver.java      Implements MyEcommerceProtocol; depends only on BrowserPort
@@ -228,11 +228,11 @@ Step classes declare the narrowest type they need. Classes that use `CartProtoco
 
 Nothing else changes.
 
-#### `BrowserPort` (44 methods)
+#### `BrowserPort`
 
 Covers: navigation (`navigateTo`, `navigateBack`, `currentUrl`), element state queries (`isVisible`, `isPresent`, `isEnabled`, `isSelected`, `count`), element content (`text`, `attribute`), nth-element queries (`isNthEnabled`, `isNthSelected`, `nthAttribute`, `nthText`), scoped queries within a parent element, actions (`click`, `clickNth`, `clickXpath`, `sendKeys`, `setReactInputValue`), JavaScript execution (`extractAllViaScript`, `executeScript`), and waits (`waitUntilVisible`, `waitUntilPresent`, `waitUntilCountMoreThan`, `waitUntilUrlContains`, `waitUntilUrlMatches`, `waitUntilAttributeChanges`, `waitUntilAnyPresent`, `waitUntilCondition`).
 
-#### `HttpPort` (3 methods)
+#### `HttpPort`
 
 Covers: `getAs(path, type)`, `getListAs(path, elementType)`, `getListWithQueryAs(path, paramName, paramValue, elementType)`.
 
