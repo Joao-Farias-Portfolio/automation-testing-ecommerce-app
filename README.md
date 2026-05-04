@@ -10,6 +10,7 @@ This repository demonstrates my architectural approach to automation in testing.
 | **kotlin-automation** | Serenity BDD + Cucumber + Selenium + REST Assured | Web, API |
 | **typescript-automation** | CucumberJS + Playwright + Axios | Web, API |
 | **frontend/e2e** | Playwright (direct) | Web |
+| **performance/k6** | k6 (smoke + load) | API |
 
 Each suite is runnable independently and exercises the same application through both the UI (Web channel) and HTTP endpoints (API channel), validating that the same business behavior holds regardless of entry point.
 
