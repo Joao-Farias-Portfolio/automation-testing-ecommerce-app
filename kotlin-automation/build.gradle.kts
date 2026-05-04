@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.3.0"
+    kotlin("jvm") version "2.4.0-Beta2"
     id("net.serenity-bdd.serenity-gradle-plugin") version "5.3.9"
 }
 
@@ -8,7 +8,7 @@ repositories {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(26)
 }
 
 dependencies {
