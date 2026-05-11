@@ -28,6 +28,7 @@ export class MyEcommerceDriver implements MyEcommerceProtocol {
 
   async browseCatalogue(): Promise<void> {
     await this.browser.navigateTo(BASE_URL);
+    await this.browser.waitUntilVisible("[data-testid='product-card']");
   }
 
   async viewCart(): Promise<void> {
@@ -80,6 +81,12 @@ export class MyEcommerceDriver implements MyEcommerceProtocol {
   async searchFor(term: string): Promise<void> {
     await this.browser.sendKeys("input[placeholder*='Search Items']", term, true);
     await this.browser.waitUntilUrlContains("/search/");
+    await this.browser.waitUntilCondition(
+      async () =>
+        (await this.browser.count("[data-testid='product-card']")) > 0 ||
+        (await this.browser.text("body")).includes("No products found"),
+      10_000
+    );
   }
 
   async viewFirstProduct(): Promise<void> {
