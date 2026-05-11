@@ -114,12 +114,12 @@ export class PlaywrightBrowserPort implements BrowserPort {
   }
 
   async extractAllViaScript(script: string): Promise<ReadonlyArray<Readonly<Record<string, string>>>> {
-    const result = await this.page.evaluate(script);
+    const result = await this.page.evaluate(`(() => { ${script} })()`);
     return result as ReadonlyArray<Readonly<Record<string, string>>>;
   }
 
   async executeScript(script: string, ...args: unknown[]): Promise<unknown> {
-    return this.page.evaluate(script, args);
+    return this.page.evaluate(`((args) => { ${script} })(${JSON.stringify(args)})`);
   }
 
   async waitUntilVisible(css: string): Promise<void> {

@@ -543,6 +543,9 @@ jobs:
       - name: Install backend deps
         run: cd backend && uv sync --locked
 
+      - name: Install frontend deps
+        run: npm ci
+
       - name: Download frontend build
         uses: actions/download-artifact@v8
         with:
