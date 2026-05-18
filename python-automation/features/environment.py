@@ -8,6 +8,7 @@ from automation.driver.web import browser_holder
 from automation.driver.web.playwright_browser_port import PlaywrightBrowserPort
 from automation.driver.web.selenium_browser_port import SeleniumBrowserPort
 from automation.dsl.protocols.channel import Channel, current_channel
+from automation.dsl.protocols.driver_factory import reset_active_driver
 
 WEB_BASE_URL = "http://localhost:3001"
 API_BASE_URL = "http://localhost:8001"
@@ -22,10 +23,9 @@ def before_all(context: Any) -> None:
 
 
 def before_scenario(context: Any, scenario: Any) -> None:
+    reset_active_driver()
     if context.channel is Channel.WEB:
         _clear_browser_storage(context)
-    # API channel: each scenario gets a fresh driver instance via the registry,
-    # but the underlying HTTP client is shared.
 
 
 def after_scenario(context: Any, scenario: Any) -> None:
@@ -110,8 +110,13 @@ def _stop_web(context: Any) -> None:
 
 def _clear_browser_storage(context: Any) -> None:
     impl = context.browser_impl
+    # The frontend persists cart and saved state under these keys
+    # (frontend/src/context/GlobalState.tsx). Wipe them all so each scenario
+    # starts from an empty cart and empty wishlist.
     script = (
         "try {"
+        "  localStorage.removeItem('cart-state');"
+        "  localStorage.removeItem('saved-state');"
         "  localStorage.removeItem('cart');"
         "  localStorage.removeItem('cartItems');"
         "  localStorage.removeItem('selectedDelivery');"

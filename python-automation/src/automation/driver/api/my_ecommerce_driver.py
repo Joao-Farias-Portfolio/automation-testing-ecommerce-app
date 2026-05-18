@@ -46,7 +46,7 @@ class ApiMyEcommerceDriver(CatalogueProtocol):
 
     def get_product_detail(self) -> ProductDetail:
         product = self._fetch_product_detail(self._current_product_id)
-        image_url = product.get("imageUrl") or ""
+        image_url = product.get("image_url") or ""
         return ProductDetail(
             title=product.get("title", ""),
             price=self._format_price(product.get("price", 0)),
@@ -97,14 +97,14 @@ class ApiMyEcommerceDriver(CatalogueProtocol):
 
     def _fetch_active_delivery_options(self) -> list[dict]:
         product = self._fetch_product_detail(self._current_product_id)
-        delivery_options = product.get("deliveryOptions") or []
-        return [opt for opt in delivery_options if opt.get("isActive")]
+        delivery_options = product.get("delivery_options") or []
+        return [opt for opt in delivery_options if opt.get("is_active")]
 
     def _to_card(self, p: dict) -> ProductCard:
         return ProductCard(
             title=p.get("title", ""),
             price=self._format_price(p.get("price", 0)),
-            image_url=self._absolute_image_url(p.get("imageUrl") or ""),
+            image_url=self._absolute_image_url(p.get("image_url") or ""),
         )
 
     @staticmethod
