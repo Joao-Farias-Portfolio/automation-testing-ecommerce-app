@@ -19,8 +19,9 @@ Faster than clicking around. No Claude Code? Keep reading — the same material 
 | Suite | Stack | Channel(s) |
 |-------|-------|-------------|
 | **java-automation** | Serenity BDD + Cucumber + Selenium / Playwright + REST Assured / OkHttp | Web, API |
-| **kotlin-automation** | Serenity BDD + Cucumber + Selenium + REST Assured | Web, API |
+| **kotlin-automation** | Serenity BDD + Cucumber + Selenium + REST Assured / OkHttp | Web, API |
 | **typescript-automation** | CucumberJS + Playwright + Axios | Web, API |
+| **python-automation** | behave + Playwright / Selenium + httpx / requests | Web, API |
 | **frontend/e2e** | Playwright (direct) | Web |
 | **performance/k6** | k6 (smoke + load) | API |
 
@@ -128,6 +129,7 @@ SQLite <-> SQLModel (ORM) <-> Pydantic schemas <-> FastAPI routes <-> React Cont
 ├── java-automation/         # Java test automation suite
 ├── kotlin-automation/       # Kotlin test automation suite
 ├── typescript-automation/   # TypeScript test automation suite
+├── python-automation/       # Python test automation suite (behave)
 ├── performance/             # k6 smoke and load tests
 ├── wiremock/                # WireMock stubs for frontend isolation
 └── .github/workflows/       # CI pipeline
@@ -172,6 +174,12 @@ cd kotlin-automation && ./gradlew test -Dchannel=API -Dcucumber.filter.tags="@ap
 # TypeScript automation
 cd typescript-automation && CHANNEL=Web npx cucumber-js --tags 'not @wip'
 cd typescript-automation && CHANNEL=API npx cucumber-js --tags '@api and not @wip'
+
+# Python automation (Web + API channels, both adapters each)
+just acceptance-py-web                 # Playwright (default)
+just acceptance-py-web-selenium        # Selenium
+just acceptance-py-api                 # httpx (default)
+just acceptance-py-api-requests        # requests
 
 # Full CI pipeline locally
 just ci
