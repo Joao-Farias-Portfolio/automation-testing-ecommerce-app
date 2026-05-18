@@ -519,6 +519,139 @@ acceptance-ts-api: _ensure-logs-dir
     echo "Report: typescript-automation/reports/api-report.html"
     exit $EXIT_CODE
 
+# ─── python-automation ────────────────────────────────────────────────────────
+
+# Install Python automation dependencies (uv sync + Playwright chromium)
+install-py:
+    cd python-automation && uv sync
+    cd python-automation && uv run playwright install chromium
+
+# Python acceptance tests — Web channel via Playwright (27 scenarios, headless)
+acceptance-py-web: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
+    cd python-automation && CHANNEL=Web BROWSER_IMPL=playwright uv run behave --tags 'not @wip' --format pretty
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    exit $EXIT_CODE
+
+# Python acceptance tests — Web channel via Selenium (27 scenarios, headless)
+acceptance-py-web-selenium: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    STARTED_FRONTEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    if ! lsof -i :3001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting frontend on :3001 ..."
+        > {{LOG_DIR}}/frontend.log
+        (cd frontend && npx vite preview --host 0.0.0.0 --port 3001 >> {{LOG_DIR}}/frontend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :3001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :3001 -sTCP:LISTEN -t > {{LOG_DIR}}/frontend.pid
+        STARTED_FRONTEND=true
+    fi
+    cd python-automation && CHANNEL=Web BROWSER_IMPL=selenium uv run behave --tags 'not @wip' --format pretty
+    EXIT_CODE=$?
+    if [ "$STARTED_FRONTEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/frontend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/frontend.pid
+    fi
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    exit $EXIT_CODE
+
+# Python acceptance tests — API channel via httpx (8 @api scenarios)
+acceptance-py-api: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    cd python-automation && CHANNEL=API HTTP_IMPL=httpx uv run behave --tags '@api and not @wip' --format pretty
+    EXIT_CODE=$?
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        echo "Stopping backend ..."
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    exit $EXIT_CODE
+
+# Python acceptance tests — API channel via requests (8 @api scenarios)
+acceptance-py-api-requests: _ensure-logs-dir
+    #!/usr/bin/env bash
+    set -e
+    STARTED_BACKEND=false
+    if ! lsof -i :8001 -sTCP:LISTEN -t &>/dev/null; then
+        echo "Starting backend on :8001 ..."
+        > {{LOG_DIR}}/backend.log
+        (cd backend && uv run --active python -m app.seed)
+        (cd backend && uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8001 >> {{LOG_DIR}}/backend.log 2>&1) &
+        for i in $(seq 1 20); do lsof -i :8001 -sTCP:LISTEN -t &>/dev/null && break; sleep 0.5; done
+        lsof -i :8001 -sTCP:LISTEN -t > {{LOG_DIR}}/backend.pid
+        STARTED_BACKEND=true
+    fi
+    cd python-automation && CHANNEL=API HTTP_IMPL=requests uv run behave --tags '@api and not @wip' --format pretty
+    EXIT_CODE=$?
+    if [ "$STARTED_BACKEND" = "true" ]; then
+        echo "Stopping backend ..."
+        kill $(cat {{LOG_DIR}}/backend.pid 2>/dev/null) 2>/dev/null || true
+        rm -f {{LOG_DIR}}/backend.pid
+    fi
+    exit $EXIT_CODE
+
+# Run Web channel with both Playwright and Selenium (adapter comparison)
+acceptance-py-web-all-adapters:
+    just acceptance-py-web
+    just acceptance-py-web-selenium
+
+# Run API channel with both httpx and requests (adapter comparison)
+acceptance-py-api-all-adapters:
+    just acceptance-py-api
+    just acceptance-py-api-requests
+
 # ─── java-api-testing ─────────────────────────────────────────────────────────
 
 # Run Serenity BDD REST API tests (requires backend running on :8001)
