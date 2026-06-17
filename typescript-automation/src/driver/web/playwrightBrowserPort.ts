@@ -48,12 +48,12 @@ export class PlaywrightBrowserPort implements BrowserPort {
 
   async isNthEnabled(css: string, index: number): Promise<boolean> {
     const loc = this.page.locator(css).nth(index);
-    return (await loc.count()) > 0 && loc.isEnabled();
+    return (await loc.count()) > 0 && await loc.isEnabled();
   }
 
   async isNthSelected(css: string, index: number): Promise<boolean> {
     const loc = this.page.locator(css).nth(index);
-    return (await loc.count()) > 0 && loc.isChecked().catch(() => false);
+    return (await loc.count()) > 0 && await loc.isChecked().catch(() => false);
   }
 
   async nthAttribute(css: string, index: number, attr: string): Promise<string> {

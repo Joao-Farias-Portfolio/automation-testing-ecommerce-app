@@ -59,7 +59,7 @@ public class Hooks {
     public void clearCartState() {
         if (!WEB_CHANNEL) return;
         if (isPlaywright()) {
-            playwrightPage.navigate("http://localhost:3001");
+            playwrightPage.navigate("http://localhost:3001", new Page.NavigateOptions().setTimeout(10_000));
             playwrightPage.evaluate("() => { try { " +
                 "localStorage.removeItem('cart');" +
                 "localStorage.removeItem('cartItems');" +

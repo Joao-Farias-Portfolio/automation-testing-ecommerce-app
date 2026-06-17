@@ -28,7 +28,7 @@ public final class PlaywrightBrowserPort implements BrowserPort {
 
     @Override
     public void navigateTo(String url) {
-        page.navigate(url);
+        page.navigate(url, new Page.NavigateOptions().setTimeout(10_000));
     }
 
     @Override
